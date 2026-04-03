@@ -86,10 +86,59 @@ header {
     white-space: nowrap;
 }
 
+/* ========== 검색 ========== */
+.search-wrap {
+    max-width: 1000px; margin: 0 auto;
+    padding: 24px 40px 0;
+}
+.search-box {
+    position: relative;
+    width: 100%;
+}
+.search-box input {
+    width: 100%;
+    padding: 12px 16px 12px 42px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    outline: none;
+    transition: var(--transition);
+}
+.search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,92,62,0.1);
+}
+.search-box input::placeholder { color: var(--text-muted); }
+.search-icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); pointer-events: none;
+}
+.search-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--text-muted);
+    margin-top: 8px; min-height: 16px;
+    letter-spacing: 0.02em;
+}
+.match-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(124,92,62,0.08);
+    border: 1px solid rgba(124,92,62,0.15);
+    border-radius: 12px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    white-space: nowrap;
+}
+
 /* ========== 메인 ========== */
 main {
     max-width: 1000px; margin: 0 auto;
-    padding: 40px 40px 80px;
+    padding: 24px 40px 80px;
 }
 
 /* ========== 상태 메시지 ========== */
@@ -238,7 +287,8 @@ footer a:hover { opacity: 1; }
     .header-inner { flex-wrap: wrap; gap: 10px; }
     .brand-title { font-size: 16px; }
     #repo-count { font-size: 10px; padding: 4px 10px; }
-    main { padding: 20px 14px 60px; }
+    .search-wrap { padding: 16px 14px 0; }
+    main { padding: 16px 14px 60px; }
     #grid { grid-template-columns: 1fr; gap: 10px; }
     .card { padding: 16px 18px; }
 }
@@ -258,6 +308,14 @@ footer a:hover { opacity: 1; }
     <div id="repo-count">불러오는 중…</div>
   </div>
 </header>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <input type="text" id="search-input" placeholder="키워드로 강의 검색 (전사 내용 기반)" autocomplete="off">
+  </div>
+  <div class="search-status" id="search-status"></div>
+</div>
 
 <main>
   <div id="error-msg"></div>
@@ -280,7 +338,12 @@ footer a:hover { opacity: 1; }
 </footer>
 
 <script>
-const MANIFEST = 'manifest.json';  // 같은 도메인 내 상대경로
+const MANIFEST = 'manifest.json';
+
+// 전사 캐시: { folder: "전체 텍스트" }
+const transcriptCache = {};
+let allEntries = [];
+let transcriptsLoaded = false;
 
 async function load() {
     const status  = document.getElementById('status');
@@ -293,35 +356,20 @@ async function load() {
         const res = await fetch(MANIFEST);
         if (!res.ok) throw new Error(`manifest.json 로드 실패: ${res.status}`);
 
-        const entries = await res.json();
-
+        allEntries = await res.json();
         status.style.display = 'none';
 
-        if (entries.length === 0) {
+        if (allEntries.length === 0) {
             empty.style.display = 'block';
             counter.textContent = '강의 0개';
             return;
         }
 
-        counter.textContent = `강의 ${entries.length}개`;
+        counter.textContent = `강의 ${allEntries.length}개`;
+        renderCards(allEntries);
 
-        entries.forEach((entry, i) => {
-            const card = document.createElement('a');
-            card.className = 'card';
-            card.href = `/${entry.folder}/`;
-            card.innerHTML = `
-                <div class="card-index">SC · ${String(i+1).padStart(2,'0')}</div>
-                <div class="card-title">${escHtml(entry.title)}</div>
-                <div class="card-meta">
-                    <span class="card-repo">${escHtml(entry.folder)}</span>
-                </div>
-                <span class="card-arrow">→</span>
-            `;
-            grid.appendChild(card);
-        });
-
-        // 렌더 후 페이드인
-        requestAnimationFrame(() => grid.classList.add('visible'));
+        // 백그라운드로 전사 데이터 로드
+        loadTranscripts();
 
     } catch (err) {
         status.style.display = 'none';
@@ -330,6 +378,115 @@ async function load() {
         counter.textContent = '오류';
     }
 }
+
+// 전사 데이터 병렬 로드
+async function loadTranscripts() {
+    const searchStatus = document.getElementById('search-status');
+    searchStatus.textContent = '전사 데이터 로딩 중...';
+
+    const promises = allEntries.map(async (entry) => {
+        try {
+            const res = await fetch(`/${entry.folder}/transcript.json`);
+            if (!res.ok) return;
+            const segments = await res.json();
+            const text = segments.map(s => s.text || '').join(' ');
+            transcriptCache[entry.folder] = text;
+        } catch {}
+    });
+
+    await Promise.all(promises);
+    transcriptsLoaded = true;
+    searchStatus.textContent = '';
+}
+
+// 카드 렌더링 (matchCount가 있으면 배지 표시)
+function renderCards(entries, matchCounts) {
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    grid.innerHTML = '';
+    grid.classList.remove('visible');
+
+    if (entries.length === 0) {
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    entries.forEach((entry, i) => {
+        const card = document.createElement('a');
+        card.className = 'card';
+        card.href = `/${entry.folder}/`;
+
+        const count = matchCounts ? matchCounts[entry.folder] : null;
+        const badge = count ? `<span class="match-badge">${count}회 언급</span>` : '';
+
+        // 검색 모드면 원래 순번 표시, 아니면 리스트 순번
+        const originalIdx = allEntries.indexOf(entry);
+        const idx = originalIdx >= 0 ? originalIdx : i;
+
+        card.innerHTML = `
+            <div class="card-index">SC · ${String(idx + 1).padStart(2,'0')}</div>
+            <div class="card-title">${escHtml(entry.title)}${badge}</div>
+            <div class="card-meta">
+                <span class="card-repo">${escHtml(entry.folder)}</span>
+            </div>
+            <span class="card-arrow">→</span>
+        `;
+        grid.appendChild(card);
+    });
+
+    requestAnimationFrame(() => grid.classList.add('visible'));
+}
+
+// 검색
+function doSearch(keyword) {
+    const searchStatus = document.getElementById('search-status');
+    const counter = document.getElementById('repo-count');
+    const kw = keyword.trim().toLowerCase();
+
+    if (!kw) {
+        renderCards(allEntries);
+        counter.textContent = `강의 ${allEntries.length}개`;
+        searchStatus.textContent = '';
+        return;
+    }
+
+    if (!transcriptsLoaded) {
+        searchStatus.textContent = '전사 데이터 로딩 중... 잠시 후 다시 시도하세요';
+        return;
+    }
+
+    // 키워드 빈도 카운트
+    const matchCounts = {};
+    allEntries.forEach(entry => {
+        const text = (transcriptCache[entry.folder] || '').toLowerCase();
+        let count = 0;
+        let pos = 0;
+        while ((pos = text.indexOf(kw, pos)) !== -1) {
+            count++;
+            pos += kw.length;
+        }
+        if (count > 0) matchCounts[entry.folder] = count;
+    });
+
+    // 빈도순 정렬
+    const matched = allEntries
+        .filter(e => matchCounts[e.folder])
+        .sort((a, b) => matchCounts[b.folder] - matchCounts[a.folder]);
+
+    renderCards(matched, matchCounts);
+    counter.textContent = `검색 결과 ${matched.length}개`;
+    searchStatus.textContent = matched.length > 0
+        ? `"${keyword}" — ${matched.length}개 강의에서 발견`
+        : `"${keyword}" — 결과 없음`;
+}
+
+// 디바운스
+let searchTimer = null;
+document.getElementById('search-input').addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => doSearch(e.target.value), 300);
+});
 
 function escHtml(str) {
     return str
