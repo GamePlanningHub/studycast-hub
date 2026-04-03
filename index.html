@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyCast — 강의 목록</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg-void: #FAF9F7;
+    --bg-surface: #F5F4F1;
+    --bg-elevated: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-glass: rgba(250,249,247,0.92);
+    --border-dim: #E5E2DC;
+    --border-accent: rgba(124,92,62,0.25);
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --text-muted: #A8A29E;
+    --accent: #7C5C3E;
+    --accent-bright: #63492F;
+    --green: #16A34A;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: var(--bg-void);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+/* ========== 헤더 ========== */
+header {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-dim);
+    padding: 20px 40px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.header-inner {
+    max-width: 1000px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px;
+}
+.brand {
+    display: flex; align-items: center; gap: 12px;
+}
+.brand-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    box-shadow: 0 2px 8px rgba(124,92,62,0.25);
+}
+.brand-title {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+}
+.brand-sub {
+    font-size: 11px; font-weight: 400;
+    color: var(--text-muted); margin-top: 1px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+}
+#repo-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-dim);
+    border-radius: 20px;
+    padding: 5px 14px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+/* ========== 메인 ========== */
+main {
+    max-width: 1000px; margin: 0 auto;
+    padding: 40px 40px 80px;
+}
+
+/* ========== 상태 메시지 ========== */
+#status {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 60px 0;
+    color: var(--text-muted); font-size: 14px;
+}
+.spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border-dim);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#error-msg {
+    display: none;
+    background: rgba(220,38,38,0.05);
+    border: 1px solid rgba(220,38,38,0.15);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    color: #DC2626;
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+}
+
+/* ========== 강의 그리드 ========== */
+#grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+#grid.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ========== 강의 카드 ========== */
+.card {
+    display: block;
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.card-index {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.1em;
+    color: var(--accent);
+    opacity: 0.7;
+    margin-bottom: 9px;
+    text-transform: uppercase;
+}
+.card-title {
+    font-size: 15px; font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    word-break: keep-all;
+}
+.card-title.no-desc {
+    color: var(--text-muted);
+    font-style: italic;
+    font-weight: 400;
+}
+.card-meta {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+}
+.card-repo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    flex: 1;
+}
+.card-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.card-arrow {
+    position: absolute;
+    bottom: 18px; right: 18px;
+    font-size: 13px;
+    color: var(--accent);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: var(--transition);
+}
+.card:hover .card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ========== 빈 상태 ========== */
+#empty {
+    display: none;
+    text-align: center;
+    padding: 80px 0;
+    color: var(--text-muted);
+}
+#empty .empty-icon { font-size: 36px; margin-bottom: 16px; }
+#empty p { font-size: 14px; line-height: 1.8; }
+
+/* ========== 푸터 ========== */
+footer {
+    text-align: center;
+    padding: 22px;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.03em;
+    border-top: 1px solid var(--border-dim);
+}
+footer a {
+    color: var(--accent);
+    text-decoration: none;
+    opacity: 0.7;
+}
+footer a:hover { opacity: 1; }
+
+@media (max-width: 600px) {
+    header { padding: 14px 20px; }
+    .header-inner { flex-wrap: wrap; gap: 10px; }
+    .brand-title { font-size: 16px; }
+    #repo-count { font-size: 10px; padding: 4px 10px; }
+    main { padding: 20px 14px 60px; }
+    #grid { grid-template-columns: 1fr; gap: 10px; }
+    .card { padding: 16px 18px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+      <div>
+        <div class="brand-title">StudyCast</div>
+        <div class="brand-sub">GamePlanningHub</div>
+      </div>
+    </div>
+    <div id="repo-count">불러오는 중…</div>
+  </div>
+</header>
+
+<main>
+  <div id="error-msg"></div>
+
+  <div id="status">
+    <div class="spinner"></div>
+    <span>강의 목록을 불러오는 중…</span>
+  </div>
+
+  <div id="grid"></div>
+
+  <div id="empty">
+    <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg></div>
+    <p>등록된 강의가 없습니다.<br>파이프라인으로 새 SC를 배포해보세요.</p>
+  </div>
+</main>
+
+<footer>
+  <a href="https://github.com/GamePlanningHub/studycast-hub" target="_blank">github.com/GamePlanningHub/studycast-hub</a>
+  &nbsp;·&nbsp; StudyCast Launcher
+</footer>
+
+<script>
+const REPO = 'GamePlanningHub/studycast-hub';
+const API  = `https://api.github.com/repos/${REPO}/contents?ref=main`;
+const PAGES_BASE = '';  // 같은 도메인 내 상대경로
+
+async function load() {
+    const status  = document.getElementById('status');
+    const grid    = document.getElementById('grid');
+    const counter = document.getElementById('repo-count');
+    const errBox  = document.getElementById('error-msg');
+    const empty   = document.getElementById('empty');
+
+    try {
+        const res = await fetch(API);
+
+        // API 속도 제한 처리
+        if (res.status === 403) {
+            const remaining = res.headers.get('x-ratelimit-remaining');
+            if (remaining === '0') {
+                throw new Error('GitHub API 속도 제한에 도달했습니다. 잠시 후 새로고침해주세요.');
+            }
+        }
+        if (!res.ok) throw new Error(`GitHub API 오류: ${res.status}`);
+
+        const contents = await res.json();
+
+        // 폴더만 필터 (파일, .으로 시작하는 숨김폴더 제외)
+        const folders = contents
+            .filter(item => item.type === 'dir' && !item.name.startsWith('.'))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        status.style.display = 'none';
+
+        if (folders.length === 0) {
+            empty.style.display = 'block';
+            counter.textContent = '강의 0개';
+            return;
+        }
+
+        counter.textContent = `강의 ${folders.length}개`;
+
+        // 각 폴더의 index.html에서 <title> 추출
+        const cards = await Promise.all(folders.map(async (folder, i) => {
+            const url = `${PAGES_BASE}/${folder.name}/`;
+            let title = folder.name.replace(/-/g, ' ');
+            try {
+                const htmlUrl = `https://raw.githubusercontent.com/${REPO}/main/${folder.name}/index.html`;
+                const r = await fetch(htmlUrl);
+                if (r.ok) {
+                    const text = await r.text();
+                    const m = text.match(/<title>([^<]+)<\/title>/);
+                    if (m) title = m[1];
+                }
+            } catch(e) { /* 폴더명 그대로 사용 */ }
+            return { name: folder.name, title, url, index: i };
+        }));
+
+        cards.forEach(({ name, title, url, index }) => {
+            const card = document.createElement('a');
+            card.className = 'card';
+            card.href = url;
+            card.innerHTML = `
+                <div class="card-index">SC · ${String(index+1).padStart(2,'0')}</div>
+                <div class="card-title">${escHtml(title)}</div>
+                <div class="card-meta">
+                    <span class="card-repo">${escHtml(name)}</span>
+                </div>
+                <span class="card-arrow">→</span>
+            `;
+            grid.appendChild(card);
+        });
+
+        // 렌더 후 페이드인
+        requestAnimationFrame(() => grid.classList.add('visible'));
+
+    } catch (err) {
+        status.style.display = 'none';
+        errBox.style.display = 'block';
+        errBox.textContent = err.message;
+        counter.textContent = '오류';
+    }
+}
+
+function escHtml(str) {
+    return str
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
+load();
+</script>
+</body>
+</html>
