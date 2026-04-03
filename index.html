@@ -312,7 +312,7 @@ footer a:hover { opacity: 1; }
 <div class="search-wrap">
   <div class="search-box">
     <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-    <input type="text" id="search-input" placeholder="키워드로 강의 검색 (전사 내용 기반)" autocomplete="off">
+    <input type="text" id="search-input" placeholder="키워드로 강의 검색 (교안 기반, 띄어쓰기 무시)" autocomplete="off">
   </div>
   <div class="search-status" id="search-status"></div>
 </div>
@@ -339,11 +339,12 @@ footer a:hover { opacity: 1; }
 
 <script>
 const MANIFEST = 'manifest.json';
+const SEARCH_INDEX = 'search-index.json';
 
-// 전사 캐시: { folder: "전체 텍스트" }
-const transcriptCache = {};
+// 교안 텍스트 캐시: { folder: "띄어쓰기 제거된 텍스트" }
+const contentCache = {};
 let allEntries = [];
-let transcriptsLoaded = false;
+let indexLoaded = false;
 
 async function load() {
     const status  = document.getElementById('status');
@@ -368,8 +369,8 @@ async function load() {
         counter.textContent = `강의 ${allEntries.length}개`;
         renderCards(allEntries);
 
-        // 백그라운드로 전사 데이터 로드
-        loadTranscripts();
+        // 백그라운드로 검색 인덱스 로드
+        loadSearchIndex();
 
     } catch (err) {
         status.style.display = 'none';
@@ -379,24 +380,23 @@ async function load() {
     }
 }
 
-// 전사 데이터 병렬 로드
-async function loadTranscripts() {
+// 검색 인덱스 로드 (교안 텍스트, 띄어쓰기 제거 후 캐싱)
+async function loadSearchIndex() {
     const searchStatus = document.getElementById('search-status');
-    searchStatus.textContent = '전사 데이터 로딩 중...';
+    searchStatus.textContent = '검색 인덱스 로딩 중...';
 
-    const promises = allEntries.map(async (entry) => {
-        try {
-            const res = await fetch(`/${entry.folder}/transcript.json`);
-            if (!res.ok) return;
-            const segments = await res.json();
-            const text = segments.map(s => s.text || '').join(' ');
-            transcriptCache[entry.folder] = text;
-        } catch {}
-    });
-
-    await Promise.all(promises);
-    transcriptsLoaded = true;
-    searchStatus.textContent = '';
+    try {
+        const res = await fetch(SEARCH_INDEX);
+        if (!res.ok) throw new Error('search-index.json 로드 실패');
+        const data = await res.json();
+        for (const [folder, text] of Object.entries(data)) {
+            contentCache[folder] = text.replace(/\s/g, '').toLowerCase();
+        }
+        indexLoaded = true;
+        searchStatus.textContent = '';
+    } catch {
+        searchStatus.textContent = '검색 인덱스 로드 실패';
+    }
 }
 
 // 카드 렌더링 (matchCount가 있으면 배지 표시)
@@ -438,11 +438,11 @@ function renderCards(entries, matchCounts) {
     requestAnimationFrame(() => grid.classList.add('visible'));
 }
 
-// 검색
+// 검색 (띄어쓰기 무시, 교안 기반)
 function doSearch(keyword) {
     const searchStatus = document.getElementById('search-status');
     const counter = document.getElementById('repo-count');
-    const kw = keyword.trim().toLowerCase();
+    const kw = keyword.trim().replace(/\s/g, '').toLowerCase();
 
     if (!kw) {
         renderCards(allEntries);
@@ -451,15 +451,15 @@ function doSearch(keyword) {
         return;
     }
 
-    if (!transcriptsLoaded) {
-        searchStatus.textContent = '전사 데이터 로딩 중... 잠시 후 다시 시도하세요';
+    if (!indexLoaded) {
+        searchStatus.textContent = '검색 인덱스 로딩 중... 잠시 후 다시 시도하세요';
         return;
     }
 
-    // 키워드 빈도 카운트
+    // 키워드 빈도 카운트 (띄어쓰기 제거된 텍스트에서 검색)
     const matchCounts = {};
     allEntries.forEach(entry => {
-        const text = (transcriptCache[entry.folder] || '').toLowerCase();
+        const text = contentCache[entry.folder] || '';
         let count = 0;
         let pos = 0;
         while ((pos = text.indexOf(kw, pos)) !== -1) {
