@@ -5,39 +5,39 @@
   },
   {
     "folder": "game-design-basics",
-    "title": "2. 게임 디자인 기초 / 컨텐츠 디자인 입문 ⭐⭐⭐ (A)"
+    "title": "2. 기획 의도 / 분석"
   },
   {
     "folder": "game-design-concept",
-    "title": "3. 게임 디자인 / 컨셉 기획 ⭐⭐⭐"
+    "title": "3. 컨셉 / 컨텐츠 디자인 / 세계관"
   },
   {
     "folder": "game-content-design-storytelling",
-    "title": "4. 게임 컨텐츠 디자인 / 스토리텔링 (A)"
+    "title": "4. 스토리텔링"
   },
   {
     "folder": "game-content-management",
-    "title": "5. 전체 컨텐츠 관리"
+    "title": "5. 컨텐츠 디자인 심화"
   },
   {
     "folder": "2d-platform-basics",
-    "title": "6. 2D 플랫폼의 이해"
+    "title": "6. 2D 플랫폼"
   },
   {
     "folder": "oop-game-design",
-    "title": "7. 게임 디자인 기초 (객체 지향 설계)"
+    "title": "7. 객체 지향 설계"
   },
   {
     "folder": "game-data-design",
-    "title": "8. 데이터의 세계"
+    "title": "8. 데이터"
   },
   {
     "folder": "game-system-reverse-design",
-    "title": "9. 시스템과 역기획"
+    "title": "9. 시스템 / 역기획"
   },
   {
     "folder": "game-state-sequence",
-    "title": "10. 상태와 시퀀스"
+    "title": "10. 상태 / 시퀀스"
   },
   {
     "folder": "level-background-design",
@@ -53,6 +53,6 @@
   },
   {
     "folder": "character-system-design",
-    "title": "21. 캐릭터 디자인, 시스템 디자인"
+    "title": "21. 캐릭터 디자인 +시스템 연계"
   }
 ]
