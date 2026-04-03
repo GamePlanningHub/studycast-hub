@@ -50,5 +50,9 @@
   {
     "folder": "fps-level-design",
     "title": "20. FPS 레벨 디자인"
+  },
+  {
+    "folder": "character-system-design",
+    "title": "21. 캐릭터 디자인, 시스템 디자인"
   }
 ]
