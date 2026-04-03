@@ -41,22 +41,22 @@
   },
   {
     "folder": "12-3d-platform",
-    "title": "12. 3D 플랫폼"
+    "title": "11. 3D 플랫폼"
   },
   {
     "folder": "level-background-design",
-    "title": "18. 레벨, 배경 디자인"
+    "title": "12. 레벨, 배경 디자인"
   },
   {
     "folder": "zone-mmorpg-level-design",
-    "title": "19. 지역, MMORPG 레벨 디자인"
+    "title": "13. 지역, MMORPG 레벨 디자인"
   },
   {
     "folder": "fps-level-design",
-    "title": "20. FPS 레벨 디자인"
+    "title": "14. FPS 레벨 디자인"
   },
   {
     "folder": "character-system-design",
-    "title": "21. 캐릭터 디자인 +시스템 연계"
+    "title": "15. 캐릭터 디자인 +시스템 연계"
   }
 ]
