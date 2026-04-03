@@ -46,5 +46,9 @@
   {
     "folder": "zone-mmorpg-level-design",
     "title": "19. 지역, MMORPG 레벨 디자인"
+  },
+  {
+    "folder": "fps-level-design",
+    "title": "20. FPS 레벨 디자인"
   }
 ]
