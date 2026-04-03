@@ -282,7 +282,7 @@ footer a:hover { opacity: 1; }
 
 <script>
 const REPO = 'GamePlanningHub/studycast-hub';
-const API  = `https://api.github.com/repos/${REPO}/contents?ref=main`;
+const API  = `https://api.github.com/repos/${REPO}/contents?ref=master`;
 const PAGES_BASE = '';  // 같은 도메인 내 상대경로
 
 async function load() {
@@ -326,7 +326,7 @@ async function load() {
             const url = `${PAGES_BASE}/${folder.name}/`;
             let title = folder.name.replace(/-/g, ' ');
             try {
-                const htmlUrl = `https://raw.githubusercontent.com/${REPO}/main/${folder.name}/index.html`;
+                const htmlUrl = `https://raw.githubusercontent.com/${REPO}/master/${folder.name}/index.html`;
                 const r = await fetch(htmlUrl);
                 if (r.ok) {
                     const text = await r.text();
