@@ -8,5 +8,6 @@
   {"folder": "oop-game-design", "title": "7. 게임 디자인 기초 (객체 지향 설계)"},
   {"folder": "game-data-design", "title": "8. 데이터의 세계"},
   {"folder": "game-system-reverse-design", "title": "9. 시스템과 역기획"},
-  {"folder": "game-state-sequence", "title": "10. 상태와 시퀀스"}
+  {"folder": "game-state-sequence", "title": "10. 상태와 시퀀스"},
+  {"folder": "level-background-design", "title": "18. 레벨, 배경 디자인"}
 ]
