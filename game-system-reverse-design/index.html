@@ -77,6 +77,25 @@ body {
     transform: scale(1.06);
     box-shadow: 0 4px 12px rgba(124,92,62,0.2);
 }
+
+.hub-btn {
+    background: transparent;
+    border: 1px solid var(--border-dim);
+    color: var(--accent);
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+    text-decoration: none;
+    margin-right: 4px;
+}
+.hub-btn svg { display: block; }
+.hub-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
 .skip-btn {
     background: transparent;
     border: 1px solid var(--border-dim);
@@ -505,7 +524,26 @@ body {
     #audio-map { margin-top: 16px; }
     #audio-controls { gap: 6px; }
     #play-btn { width: 36px; height: 36px; font-size: 14px; }
-    .skip-btn { width: 30px; height: 30px; font-size: 11px; }
+    
+.hub-btn {
+    background: transparent;
+    border: 1px solid var(--border-dim);
+    color: var(--accent);
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+    text-decoration: none;
+    margin-right: 4px;
+}
+.hub-btn svg { display: block; }
+.hub-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+.skip-btn { width: 30px; height: 30px; font-size: 11px; }
     #time-display { min-width: 70px; font-size: 10px; }
     #speed-select { padding: 4px 6px; font-size: 10px; }
 
@@ -721,6 +759,7 @@ body {
   <div id="audio-bar">
     <audio id="audio" src="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev/game-system-reverse-design/%EB%8B%B9%EC%8B%A0%EC%9D%98_%EC%9E%AC%EB%AF%B8%EB%8A%94_%EC%B2%A0%EC%A0%80%ED%9E%88_%EA%B3%84%EC%82%B0%EB%90%9C_%EA%B2%B0%EA%B3%BC%EB%8B%A4.m4a" preload="auto"></audio>
     <div id="audio-controls">
+      <a href="/" class="hub-btn" title="목록으로"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
       <button class="skip-btn" onclick="skipTime(-10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="2.5" height="12" rx="1" fill="currentColor"/><path d="M13 1.5L5 7L13 12.5V1.5Z" fill="currentColor"/></svg></button>
       <button id="play-btn" onclick="togglePlay()"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg></button>
       <button class="skip-btn" onclick="skipTime(10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1.5L9 7L1 12.5V1.5Z" fill="currentColor"/><rect x="10.5" y="1" width="2.5" height="12" rx="1" fill="currentColor"/></svg></button>
