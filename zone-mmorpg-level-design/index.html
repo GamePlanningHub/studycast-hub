@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>19. 지역, MMORPG 레벨 디자인</title>
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg-void: #FAF9F7;
+    --bg-surface: #F5F4F1;
+    --bg-elevated: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-glass: rgba(250, 249, 247, 0.92);
+    --border-subtle: rgba(0,0,0,0.06);
+    --border-dim: #E5E2DC;
+    --border-accent: rgba(124,92,62,0.25);
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --text-muted: #A8A29E;
+    --accent: #7C5C3E;
+    --accent-glow: rgba(124,92,62,0.12);
+    --accent-bright: #63492F;
+    --gold: #B45309;
+    --gold-dim: rgba(180,83,9,0.08);
+    --green: #16A34A;
+    --green-dim: rgba(22,163,74,0.08);
+    --red: #DC2626;
+    --red-dim: rgba(220,38,38,0.07);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: var(--bg-void);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+/* ========== 오디오 바 ========== */
+#audio-bar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-dim);
+    padding: 12px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+#audio-controls {
+    display: flex; align-items: center; gap: 12px;
+    max-width: 860px; margin: 0 auto;
+}
+#play-btn {
+    background: var(--accent);
+    border: none; color: #fff;
+    width: 38px; height: 38px; border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(124,92,62,0.2);
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+#play-btn svg { display: block; }
+#play-btn:hover {
+    background: var(--accent-bright);
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(124,92,62,0.2);
+}
+.skip-btn {
+    background: transparent;
+    border: 1px solid var(--border-dim);
+    color: var(--text-muted);
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+.skip-btn svg { display: block; }
+.skip-btn:hover {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+#time-display {
+    color: var(--text-muted); font-size: 12px;
+    min-width: 90px; font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+}
+
+/* 커스텀 시크바 */
+#seek-bar {
+    flex: 1; height: 3px;
+    -webkit-appearance: none; appearance: none;
+    background: var(--border-dim);
+    border-radius: 2px; outline: none;
+    cursor: pointer; transition: height 0.15s ease;
+}
+#seek-bar:hover { height: 5px; }
+#seek-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 1px 4px rgba(124,92,62,0.2);
+    cursor: pointer;
+    transition: var(--transition);
+}
+#seek-bar::-webkit-slider-thumb:hover {
+    transform: scale(1.25);
+}
+#seek-bar::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%; border: none;
+    background: var(--accent);
+    cursor: pointer;
+}
+
+#speed-select {
+    background: var(--bg-elevated); color: var(--text-secondary);
+    border: 1px solid var(--border-dim);
+    border-radius: 6px; padding: 5px 10px;
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    cursor: pointer; outline: none;
+    transition: var(--transition);
+}
+#speed-select:hover { border-color: var(--accent); }
+
+/* ========== 슬라이드 네비게이션 ========== */
+#slide-nav {
+    display: flex; gap: 3px; padding: 10px 24px;
+    overflow-x: auto; background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-dim);
+    justify-content: flex-start; flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+#slide-nav::-webkit-scrollbar { display: none; }
+
+.nav-dot {
+    width: 34px; height: 28px; border-radius: 7px;
+    border: 1px solid transparent; cursor: pointer;
+    font-size: 11px; font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+    position: relative;
+    flex-shrink: 0;
+}
+.nav-dot.has-audio {
+    background: rgba(124,92,62,0.07); color: var(--accent);
+    border-color: rgba(124,92,62,0.15);
+}
+.nav-dot.no-audio {
+    background: transparent; color: var(--text-muted);
+    opacity: 0.55;
+}
+.nav-dot:hover {
+    opacity: 1;
+    border-color: var(--accent);
+    background: rgba(124,92,62,0.08);
+}
+.nav-dot.active {
+    background: var(--accent); color: #fff;
+    opacity: 1;
+    box-shadow: 0 2px 8px rgba(124,92,62,0.18);
+    border-color: transparent;
+}
+
+/* 슬라이드 전환 애니메이션 */
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+#slide-content {
+    animation: slideIn 0.25s ease-out;
+}
+
+#slide-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+#slide-id {
+    color: var(--accent); font-size: 11px; letter-spacing: 2px;
+    font-weight: 500; text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+}
+#slide-badge {
+    font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    font-weight: 500; letter-spacing: 0.3px;
+}
+.badge-no-audio {
+    background: var(--gold-dim); color: var(--accent);
+    border: 1px solid rgba(124,92,62,0.2);
+    font-weight: 600;
+}
+
+#slide-title {
+    font-size: 24px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 28px; line-height: 1.5;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-dim);
+    letter-spacing: -0.3px;
+}
+
+/* ========== 슬라이드 콘텐츠 블록 ========== */
+
+.slide-text {
+    color: var(--text-secondary); font-size: 15px;
+    line-height: 1.85; margin-bottom: 18px;
+    font-weight: 400;
+}
+.slide-text strong {
+    color: var(--text-primary); font-weight: 600;
+    background: var(--gold-dim);
+    padding: 1px 5px; border-radius: 4px;
+}
+.slide-text em {
+    color: var(--accent); font-style: italic; font-weight: 400;
+}
+
+/* 인용 블록 */
+.slide-quote {
+    background: var(--bg-surface);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px; margin-bottom: 14px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--text-secondary); font-size: 14.5px;
+    line-height: 1.8; font-weight: 400;
+}
+.slide-quote strong {
+    color: var(--text-primary); font-weight: 600;
+}
+
+/* 포인트 리스트 */
+.slide-points {
+    list-style: none; margin-bottom: 18px; padding-left: 0;
+    display: flex; flex-direction: column; gap: 5px;
+}
+.slide-points li {
+    position: relative;
+    padding: 11px 16px 11px 34px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    font-size: 14px; line-height: 1.7;
+    color: var(--text-secondary); font-weight: 400;
+    border: 1px solid var(--border-dim);
+    transition: var(--transition);
+}
+.slide-points li:hover {
+    border-color: rgba(124,92,62,0.16);
+    background: #FDF9F6;
+}
+.slide-points li::before {
+    content: '';
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%);
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+.slide-points li strong {
+    color: var(--text-primary); font-weight: 600;
+}
+
+/* 노트 블록 (aside) */
+.slide-note {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: #FDF9F6;
+    border: 1px solid rgba(124,92,62,0.15);
+    border-radius: var(--radius);
+    padding: 16px 18px; margin-top: 24px;
+    position: relative; overflow: hidden;
+}
+.slide-note::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent);
+    opacity: 0.6;
+}
+.note-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+.note-content {
+    color: var(--text-secondary); font-size: 13.5px;
+    line-height: 1.8; font-weight: 400;
+}
+.note-content strong { color: var(--text-primary); font-weight: 600; }
+
+/* 이미지 */
+.slide-image {
+    margin-bottom: 20px; text-align: center;
+}
+.slide-image img {
+    max-width: 100%; border-radius: var(--radius);
+    border: 1px solid var(--border-dim);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+/* ========== 정의 카드 (> **제목** 본문 패턴) ========== */
+.slide-def-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-dim);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    transition: var(--transition);
+}
+.slide-def-card:hover {
+    border-color: rgba(124,92,62,0.18);
+    border-left-color: var(--accent-bright);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.def-title {
+    color: var(--accent); font-size: 14px; font-weight: 700;
+    margin-bottom: 7px; letter-spacing: 0.1px;
+}
+.def-desc {
+    color: var(--text-secondary); font-size: 13.5px;
+    line-height: 1.8; font-weight: 400;
+}
+.def-desc strong { color: var(--text-primary); font-weight: 600; }
+
+/* ========== 섹션 카드 (**볼드 헤더** + 본문) ========== */
+.slide-card {
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-dim);
+    transition: var(--transition);
+}
+.slide-card:hover {
+    border-color: rgba(124,92,62,0.16);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.card-heading {
+    color: var(--text-primary); font-size: 14px; font-weight: 600;
+    margin-bottom: 5px; display: flex; align-items: center; gap: 8px;
+}
+.card-heading::before {
+    content: ''; display: inline-block;
+    width: 3px; height: 13px;
+    background: var(--accent); border-radius: 2px;
+    flex-shrink: 0;
+}
+.card-desc {
+    color: var(--text-secondary); font-size: 13.5px;
+    line-height: 1.8; font-weight: 400;
+    padding-left: 11px;
+}
+.card-desc strong { color: var(--text-primary); font-weight: 600; }
+.card-desc em { color: var(--accent); font-style: italic; }
+
+/* ========== 오디오 구간 맵 (재생바 아래 타임라인) ========== */
+#audio-map {
+    max-width: 860px; margin: 8px auto 0;
+    height: 22px;
+    display: flex;
+    gap: 1px;
+    border-radius: 4px;
+    overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: var(--border-dim);
+    scrollbar-width: none;
+}
+#audio-map::-webkit-scrollbar { display: none; }
+.map-segment {
+    height: 100%;
+    min-width: 20px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    transition: filter 0.15s;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 0 2px;
+}
+.map-segment:hover {
+    filter: brightness(1.15);
+    z-index: 1;
+}
+.map-segment.active {
+    filter: brightness(1.15);
+    color: #FDF9F6;
+    font-weight: 500;
+    box-shadow: inset 0 0 0 1.5px rgba(124,92,62,0.6);
+}
+/* 구간별 색상 */
+.map-segment:nth-of-type(odd)  { background: rgba(124,92,62,0.5); }
+.map-segment:nth-of-type(even) { background: rgba(99,73,47,0.38); }
+.map-gap {
+    height: 100%;
+    background: var(--border-dim);
+}
+
+/* ========== 메인 레이아웃 (콘텐츠 + 인덱스) ========== */
+#main-layout {
+    display: flex;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+#slide-area {
+    flex: 1;
+    min-width: 0;
+}
+#slide-container {
+    max-width: 800px; margin: 0 auto;
+    padding: 36px 28px 80px;
+}
+
+/* ========== 인덱스 패널 (우측 사이드바) ========== */
+#index-panel {
+    width: 236px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-dim);
+    background: var(--bg-surface);
+    position: sticky;
+    top: 80px;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-dim) transparent;
+}
+#index-panel::-webkit-scrollbar { width: 4px; }
+#index-panel::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+
+#index-header {
+    padding: 16px 14px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    font-family: 'Noto Sans KR', sans-serif;
+    border-bottom: 1px solid var(--border-dim);
+}
+
+.index-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    border-left: 2px solid transparent;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.index-item:hover {
+    background: var(--bg-elevated);
+    border-left-color: rgba(124,92,62,0.18);
+}
+.index-item.active {
+    background: var(--bg-elevated);
+    border-left-color: var(--accent);
+}
+.index-item .idx-id {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    min-width: 28px;
+}
+.index-item .idx-title {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+.index-item.active .idx-title {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+/* 교안 전용 목차 항목 */
+.index-item:not(.has-audio) .idx-id::after {
+    content: '';
+    display: inline-block;
+    width: 5px; height: 5px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-left: 3px;
+    vertical-align: middle;
+}
+
+/* ========== 반응형 ========== */
+@media (max-width: 900px) {
+    #index-panel { display: none; }
+    #main-layout { display: block; }
+    #audio-map { margin-top: 12px; }
+}
+@media (max-width: 640px) {
+    /* 오디오 바 */
+    #audio-bar { padding: 10px 12px; }
+    #audio-map { margin-top: 16px; }
+    #audio-controls { gap: 6px; }
+    #play-btn { width: 36px; height: 36px; font-size: 14px; }
+    .skip-btn { width: 30px; height: 30px; font-size: 11px; }
+    #time-display { min-width: 70px; font-size: 10px; }
+    #speed-select { padding: 4px 6px; font-size: 10px; }
+
+    /* 네비게이션 도트 */
+    #slide-nav { padding: 8px 12px; gap: 2px; }
+    .nav-dot { width: 28px; height: 26px; font-size: 9px; }
+
+    /* 슬라이드 영역 */
+    #slide-container { padding: 20px 14px 80px; }
+    #slide-title { font-size: 20px; margin-bottom: 20px; padding-bottom: 14px; }
+    #slide-header { gap: 8px; margin-bottom: 8px; }
+    #slide-id { font-size: 10px; }
+    #slide-badge { font-size: 9px; padding: 2px 8px; }
+
+    /* 콘텐츠 블록 */
+    .slide-text { font-size: 13.5px; line-height: 1.9; }
+    .slide-card { padding: 16px; }
+    .slide-def-card { padding: 14px; }
+    .slide-note { padding: 14px 16px; font-size: 12.5px; }
+    .slide-points li { font-size: 13.5px; }
+    .slide-image img { max-height: 50vh; }
+
+    /* 자막 */
+    #subtitle-box { padding: 8px 14px; border-radius: 8px; }
+    #subtitle-text { font-size: 0.85rem; }
+}
+
+/* ========== 플로팅 자막 ========== */
+#subtitle-box {
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(28,25,23,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 10px 18px;
+    max-width: 680px;
+    width: 90vw;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    transition: opacity 0.2s;
+    cursor: default;
+    user-select: none;
+}
+#subtitle-box.dragging { opacity: 0.85; transition: none; }
+#subtitle-box.hidden { display: none; }
+#subtitle-box.text-only {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+}
+#subtitle-box.text-only #subtitle-text {
+    color: var(--text-primary);
+    text-shadow: 0 0 8px var(--bg-void), 0 0 16px var(--bg-void);
+}
+
+/* PC 드래그 모드 */
+#subtitle-box.free {
+    transform: none;
+    cursor: grab;
+    resize: both;
+    overflow: hidden;
+    min-width: 200px;
+    min-height: 40px;
+}
+#subtitle-box.free:active { cursor: grabbing; }
+
+#subtitle-text {
+    color: #F0EDE8;
+    font-size: 1rem;
+    line-height: 1.6;
+    pointer-events: none;
+}
+#subtitle-text:empty::after {
+    content: '';
+}
+#subtitle-box:has(#subtitle-text:empty) {
+    opacity: 0;
+    pointer-events: none;
+}
+#subtitle-box:has(#subtitle-text:not(:empty)) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 자막 컨트롤 */
+#sub-controls {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    z-index: 1001;
+    display: flex;
+    gap: 3px;
+    flex-direction: row;
+}
+.sub-ctrl-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(28,25,23,0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #D6D3D1;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.15s;
+}
+.sub-ctrl-btn:hover {
+    background: rgba(28,25,23,0.9);
+    color: #fff;
+}
+.sub-ctrl-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+}
+
+@media (max-width: 900px) {
+    #subtitle-box { max-width: 95vw; width: 95vw; padding: 8px 14px; border-radius: 8px; bottom: 56px; }
+    #subtitle-box.free {
+        cursor: default; resize: none;
+        left: 50% !important; transform: translateX(-50%) !important;
+        width: 95vw !important;
+    }
+    #sub-controls { bottom: 14px; left: 14px; }
+    .sub-ctrl-btn { width: 30px; height: 30px; font-size: 12px; }
+    #slide-container { padding-bottom: 140px !important; }
+}
+
+/* ========== 모바일 목차 FAB + 오버레이 ========== */
+#index-fab {
+    display: none;
+    position: fixed;
+    bottom: 20px; right: 18px;
+    z-index: 1100;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(124,92,62,0.2);
+    transition: var(--transition);
+    align-items: center; justify-content: center;
+}
+#index-fab:hover {
+    background: var(--accent-bright);
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(124,92,62,0.2);
+}
+@media (max-width: 900px) {
+    #index-fab { display: flex; bottom: 14px; }
+}
+
+#index-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: 1200;
+    background: rgba(28,25,23,0.35);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+#index-overlay.open { display: flex; justify-content: flex-end; }
+
+#index-overlay-panel {
+    width: min(300px, 85vw);
+    height: 100%;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-dim);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-dim) transparent;
+    animation: slideInRight 0.2s ease-out;
+}
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+#index-overlay-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-dim);
+}
+#index-overlay-header span {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+}
+#index-overlay-close {
+    background: transparent; border: none;
+    color: var(--text-muted); font-size: 20px;
+    cursor: pointer; padding: 4px 8px;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+#index-overlay-close:hover {
+    background: var(--border-dim); color: var(--text-primary);
+}
+#index-overlay-list .index-item {
+    padding: 10px 16px;
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="audio-bar">
+    <audio id="audio" src="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev/zone-mmorpg-level-design/%EA%B2%8C%EC%9E%84_%EC%86%8D_%EC%9E%90%EC%9C%A0%EB%8A%94_%EC%B2%A0%EC%A0%80%ED%9E%88_%EA%B3%84%EC%82%B0%EB%90%9C_%ED%99%98%EC%83%81.m4a" preload="auto"></audio>
+    <div id="audio-controls">
+      <button class="skip-btn" onclick="skipTime(-10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="2.5" height="12" rx="1" fill="currentColor"/><path d="M13 1.5L5 7L13 12.5V1.5Z" fill="currentColor"/></svg></button>
+      <button id="play-btn" onclick="togglePlay()"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg></button>
+      <button class="skip-btn" onclick="skipTime(10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1.5L9 7L1 12.5V1.5Z" fill="currentColor"/><rect x="10.5" y="1" width="2.5" height="12" rx="1" fill="currentColor"/></svg></button>
+      <span id="time-display">0:00 / 0:00</span>
+      <input type="range" id="seek-bar" min="0" max="86400" value="0" step="0.1">
+      <select id="speed-select" onchange="changeSpeed(this.value)">
+        <option value="0.5">0.5x</option>
+        <option value="0.75">0.75x</option>
+        <option value="1" selected>1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2">2.0x</option>
+      </select>
+    </div>
+    <div id="audio-map"></div>
+  </div>
+  <div id="slide-nav"></div>
+  <div id="main-layout">
+    <div id="slide-area">
+      <div id="slide-container">
+        <div id="slide-header">
+          <span id="slide-id"></span>
+          <span id="slide-badge"></span>
+        </div>
+        <h1 id="slide-title"></h1>
+        <div id="slide-content"></div>
+      </div>
+    </div>
+    <div id="index-panel">
+      <div id="index-header">목차</div>
+      <div id="index-list"></div>
+    </div>
+  </div>
+</div>
+<button id="index-fab" onclick="openOverlay()" title="목차">☰</button>
+<div id="index-overlay" onclick="if(event.target===this)closeOverlay()">
+  <div id="index-overlay-panel">
+    <div id="index-overlay-header">
+      <span>목차</span>
+      <button id="index-overlay-close" onclick="closeOverlay()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div id="index-overlay-list"></div>
+  </div>
+</div>
+<div id="subtitle-box" class="pos-bottom">
+  <span id="subtitle-text"></span>
+</div>
+<div id="sub-controls">
+  <button class="sub-ctrl-btn" id="sub-pos-btn" title="위치 변경"><span id="sub-pos-icon"></span></button>
+  <button class="sub-ctrl-btn" id="sub-size-up" title="글자 크게">A+</button>
+  <button class="sub-ctrl-btn" id="sub-size-dn" title="글자 작게">A-</button>
+  <button class="sub-ctrl-btn" id="sub-hide-btn" title="자막 숨기기">CC</button>
+</div>
+<script>
+const SLIDES = [
+  {
+    "id": "P1",
+    "title": "지역 디자인",
+    "content": "<div class=\"slide-text\">게임 세계를 구성하는 지역의 개념과 설계 원칙을 이해하고, 플레이어 경험을 중심으로 한 지역 기획의 전 과정을 살펴본다.</div>",
+    "hasAudio": true,
+    "start": 0.0,
+    "end": 138.0
+  },
+  {
+    "id": "P2",
+    "title": "지역 디자인의 목적",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">컨텐츠 배치&배분</div><div class=\"card-desc\">게임 전체 컨텐츠를 지역별로 체계적으로 분류하고, 플레이어 경험이 고르게 분산되도록 균형 있게 배분한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">리소스 산정</div><div class=\"card-desc\">지역별 필요 리소스의 종류, 수량, 규모, 작업량을 구체적으로 산출하여 개발 계획의 기초 자료로 활용한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">세부 레벨 디자인 준비</div><div class=\"card-desc\">각 맵의 세부 레벨 디자인에 앞서 필요한 기반 작업을 수행하고, 일관된 디자인 방향성을 사전에 설정한다</div></div>",
+    "hasAudio": true,
+    "start": 138.0,
+    "end": 161.0
+  },
+  {
+    "id": "P3",
+    "title": "지역과 월드 구성 시 고려사항",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">게임 컨셉 기획</div><div class=\"card-desc\">게임의 전반적인 방향성과 플레이어가 경험할 핵심 가치를 명확히 정의한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">세계관</div><div class=\"card-desc\">게임 세계의 역사, 문화, 사회 구조, 규칙 등을 구체적으로 설정하여 몰입감있는 배경을 구축한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">플레이 규모</div><div class=\"card-desc\">MMO, MO, 싱글 플레이 등 목표 플레이 형태를 정의하고, 이에 맞는 월드 규모를 결정한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">전체 플레이 타임</div><div class=\"card-desc\">유저가 게임 내에서 소비할 총 예상 플레이 시간을 설정하고, 컨텐츠 밀도를 조율한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">유저 플레이 타임</div><div class=\"card-desc\">클래스별, 진영별 플레이 스타일을 세분화하고, 각 타입에 맞는 컨텐츠와 경험을 대응시킨다</div></div>",
+    "hasAudio": true,
+    "start": 161.0,
+    "end": 183.0
+  },
+  {
+    "id": "P4",
+    "title": "월드 구성",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">지역&연결</div><div class=\"card-desc\">전체 지역 목록을 정리하고, 지역 간 이동 경로와 이동 조건(레벨 제한, 진영 구분, 특수 조건 등)을 구체적으로 설정한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주 유저 설정</div><div class=\"card-desc\">지역별 주요 타깃 유저를 정의한다. 가장 핵심적인 기준은 유저 레벨 구간이며, 이에 따른 컨텐츠 수명과 소비 주기도 함께 설계해야 한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">월드 세계관 & 구성 요소</div><div class=\"card-desc\">전체 월드의 세계관을 수립하고, 지역 내 도시/필드/던전의 수량과 각 공간의 역할 및 특성을 간략히 정리한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">도시</div><div class=\"card-desc\">플레이어가 모이고, 거래하고, 이야기가 시작되는 살아있는 거점</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">필드</div><div class=\"card-desc\">위험과 발견이 공존하는, 끝없이 펼쳐진 모험의 무대</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">던전</div><div class=\"card-desc\">강렬한 도전과 짜릿한 보상이 기다리는, 이야기의 클라이맥스</div></div>",
+    "hasAudio": true,
+    "start": 183.0,
+    "end": 203.0
+  },
+  {
+    "id": "P5",
+    "title": "지역 별 시나리오 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">지역명</div><div class=\"card-desc\">세계관과 분위기를 직관적으로 전달하는 고유한 명칭을 부여한다. 이름 하나만으로도 플레이어의 기대감을 형성할 수 있어야 한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">배경 스토리</div><div class=\"card-desc\">지역이 현재의 모습을 갖게 된 역사적 맥락과 현재 상황을 서술한다. 플레이어가 자연스럽게 세계에 몰입할 수 있는 서사적 토대가 된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">지리적 특징</div><div class=\"card-desc\">규모, 기후, 지형 타입, 주요 랜드마크 등 물리적 환경을 구체적으로 정의한다. 이는 레벨 디자인과 몬스터 배치의 기준이 된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">역사</div><div class=\"card-desc\">세계관과 긴밀하게 연계된 해당 지역의 과거 사건과 변천사를 기록한다. 깊이 있는 역사는 지역에 생명력을 불어넣는다.</div></div>",
+    "hasAudio": true,
+    "start": 203.0,
+    "end": 217.0
+  },
+  {
+    "id": "P6",
+    "title": "지역 별 비주얼 요소 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">대표 이미지 & 시각적 테마</div><div class=\"card-desc\">지역의 전체 분위기를 한눈에 전달하는 핵심 테마를 단어 또는 짧은 문장으로 정의한다. 이 테마는 아트 팀의 방향성 기준이 된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex)</div><div class=\"card-desc\">“눈 덮인 산”, “핵전쟁 이후 버려진 공항을 무성한 덩굴식물이 뒤덮고 있다.”</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주요 구성 요소</div></div>\n<ul class=\"slide-points\"><li>지형 구조물 : 바위, 식생, 수계 등 자연 환경 요소</li><li>특징적 구조물 : 랜드마크, 유적, 상징물 등</li><li>건축 양식 : 시대적 배경, 문화권, 건축 스타일</li></ul>",
+    "hasAudio": true,
+    "start": 217.0,
+    "end": 235.0
+  },
+  {
+    "id": "P7",
+    "title": "지역별 게임 플레이 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">1. 기획적 기능</div><div class=\"card-desc\">유저 레벨 구간, 총 플레이 타임, 적정 이용 인원, 지역 지도, 도시/필드/던전 전체 리스트 등 지역 운영에 필요한 핵심 수치와 구성 요소를 정의한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">2. 게임 플레이 시 역할</div><div class=\"card-desc\">해당 지역이 전체 게임 흐름 속에서 어떤 위치를 차지하는지 명확히 정의한다. 성장 구간, 스토리 분기, 컨텐츠 허브 등 지역의 전략적 역할을 구체화한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">3. 주요 유저 체험 요소</div><div class=\"card-desc\">이 지역을 플레이하며 유저가 느끼게 될 핵심 감정, 행동 패턴, 서사적 경험을 목록화 한다. 단순 기능 나열이 아닌, 유저 관점의 경험 설계가 핵심이다.</div></div>",
+    "hasAudio": true,
+    "start": 235.0,
+    "end": 271.0
+  },
+  {
+    "id": "P8",
+    "title": "맵 시스템",
+    "content": "<div class=\"slide-text\">게임 세계를 구조화하는 공간 설계의 핵심 - 위치, 이동, 연결을 체계적으로 정의한다.</div>",
+    "hasAudio": true,
+    "start": 271.0,
+    "end": 290.0
+  },
+  {
+    "id": "P9",
+    "title": "맵 시스템 설정의 고려 사항",
+    "content": "<div class=\"slide-text\">맵 시스템 기획은 아래 두 가지 핵심 질문에서 출발한다. 이를 바탕으로 맵의 구조, 규칙, 시퀀스, UI (시스템의 필수 4가지 요소)등 관련 시스템 요소를 체계적으로 도출하고 정의한다.<br>*구조를 짠다 = 테이블을 설계한다</div>\n<div class=\"slide-card\"><div class=\"card-heading\">맵의 구조 설계</div><div class=\"card-desc\">게임 세계에서 맵은 어떻게 구성되는가? 예를 들면 타일 방식이라면, 맵 클래스와 타일 클래스를 각각 어떻게 설계할 것인지 구체적으로 정의한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">맵 활용 컨텐츠 & 시스템</div><div class=\"card-desc\">게임 내에서 맵을 활용하는 컨텐츠와 시스템은 무엇인가? 미니맵, 월드맵, 탐험 시스템, 이동 경로 표시 등 맵과 연계된 모든 요소를 목록화한다.</div></div>",
+    "hasAudio": true,
+    "start": 290.0,
+    "end": 304.0
+  },
+  {
+    "id": "P10",
+    "title": "맵 시스템 설정 체크 예시",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">위치 정의 방식</div><div class=\"card-desc\">평면 타일, 고저차 타일, 2D/3D 좌표계 등 공간을 어떻게 수치화하고 정의할지 결정한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">배치 오브젝트 종류</div><div class=\"card-desc\">맵 위에 배치 가능한 오브젝트의 유형(NPC, 몬스터, 장애물, 상호작용 오브젝트 등)과 배치 규칙을 정의한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">이동 방식</div><div class=\"card-desc\">캐릭터/몬스터/펫 각각의 이동 로직을 정의하고, 비행/수영 등 특수 이동 가능 여부를 설정한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">맵의 동적 변화</div><div class=\"card-desc\">시간대, 날씨, 이벤트 등에 따른 지형/밝기/색감/오브젝트의 동적 변화 여부와 구현 방식을 설정한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">클래스 설계</div><div class=\"card-desc\">도시/던전/필드를 단일 클래스로 통합 설계할지, 각각의 하위 클래스로 분리 설계할지 구조를 결정한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">맵 간 이동 방식</div><div class=\"card-desc\">포털, 로딩 화면, 심리스 전환 등 맵과 맵 사이의 이동 방식을 결정하고 UX흐름을 설계한다.</div></div>",
+    "hasAudio": true,
+    "start": 304.0,
+    "end": 381.0
+  },
+  {
+    "id": "P11",
+    "title": "도시 디자인",
+    "content": "<div class=\"slide-text\">전투의 긴장을 내려놓고, 새로운 여정을 준비하는 공간 - 도시는 게임 세계의 살아있는 중심이다.</div>",
+    "hasAudio": true,
+    "start": 381.0,
+    "end": 390.0
+  },
+  {
+    "id": "P12",
+    "title": "도시의 기능",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">세계 몰입</div><div class=\"card-desc\">스토리와 비주얼이 살아 숨쉬는 공간이다. 플레이어는 도시를 통해 게임 세계의 깊이를 체감한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">전투 후 정비</div><div class=\"card-desc\">전장을 벗어나 장비를 정리하고 다음 모험을 준비하는, 긴장 해소와 재충전의 공간이다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">퀘스트 진행</div><div class=\"card-desc\">새로운 임무가 시작되고 보상이 돌아오는 곳. 도시는 서사의 출발점이자 귀환점이다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">커뮤니티 활동</div><div class=\"card-desc\">거래, 파티 구성, 친교가 이루어지는 사회적 허브이다. 플레이어 간 관계가 형성되는 중심지이다.</div></div>",
+    "hasAudio": true,
+    "start": 390.0,
+    "end": 403.0
+  },
+  {
+    "id": "P13",
+    "title": "도시 시나리오 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">도시명</div><div class=\"card-desc\">세계관의 역사와 분위기를 직관적으로 담아내는 고유한 명칭을 부여한다. 이름 하나가 도시의 첫인상을 결정하며, 플레이어의 기대감을 형성한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">배경 스토리</div><div class=\"card-desc\">도시가 현재의 모습을 갖게 된 역사적 맥락과 현재 상황을 서술한다. 탄탄한 배경 스토리는 플레이어가 도시에 자연스럽게 몰입하게 만드는 서사적 토대이다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">지리적 구조 & 주요 구조물</div><div class=\"card-desc\">도시 내 공간 구성과 핵심 건축물을 구체적으로 정의한다. 광장, 시장, 성채, 신전 등 주요 거점의 위치와 기능적 역할을 명확히 설정한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주요 사건 & 갈등 요소</div><div class=\"card-desc\">스토리 전개를 이끄는 핵심 사건과 도시 내부의 갈듬 구조를 설계한다. 이는 퀘스트 흐름과 NPC 배치의 핵심 기반이 되며, 도시에 생동감을 부여한다.</div></div>",
+    "hasAudio": true,
+    "start": 403.0,
+    "end": 411.0
+  },
+  {
+    "id": "P14",
+    "title": "도시 비주얼 요소 설정",
+    "content": "<div class=\"slide-text\">도시의 비주얼 요소를 구체적으로 정의한다. 단순한 외형 묘사를 넘어,<br>아트 팀이 실제로 참고할 수 있는 아트 디렉션의 기준이 되어야 한다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">특징적 구조물 & 건축 양식</div><div class=\"card-desc\">도시의 정체성을 결정하는 랜드마크와 건축 스타일을 정의한다. 시대적 배경과 문화권을 반영해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주요 오브젝트</div><div class=\"card-desc\">세계관을 반영하는 소품과 배치 오브젝트를 설정한다. Ex) 낡은 우체통, 빈 드럼통, 가판대 등</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">지형 구성물</div><div class=\"card-desc\">바닥재, 건물 외벽, 골목 구조 등 도시를 구성하는 기본 환경 요소를 정의한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시각적 테마</div><div class=\"card-desc\">도시의 분위기를 함축하는 핵심 키워드나 짧은 문장으로 정의한다. 아트 방향성의 출발점이 된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">대표 이미지</div><div class=\"card-desc\">도시의 전체 분위기와 정체성을 한눈에 전달하는 레퍼런스 이미지를 선정한다.</div></div>",
+    "hasAudio": true,
+    "start": 411.0,
+    "end": 418.0
+  },
+  {
+    "id": "P15",
+    "title": "도시 게임 플레이 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">기본 수치 설정</div></div>\n<ul class=\"slide-points\"><li>도시가 커버하는 성장 범위인 규모 및 유저 레벨 구간을 정의한다</li><li>적정 이용 인원과 회당 이용 시간, 총 플레이 타임의 기준을 수립한다</li><li>상점, 창고, 퀘스트 NPC 등 핵심 서비스 기능을 수행할 건물 목록을 구성한다.</li></ul>\n<div class=\"slide-card\"><div class=\"card-heading\">경험 설계</div></div>\n<ul class=\"slide-points\"><li>도시에서 시작되어 진행 및 완료되는 주요 퀘스트 흐름을 설계한다</li><li>전체 게임 진행 과정에서 해당 도시가 담당하는 기능적 역할을 정의한다</li><li>플레이어가 도시 내에서 느끼게 될 핵심 감정과 경험 요소를 설정한다</li><li>공간 배치와 동선을 확인할 수 있는 개략적인 구조도를 준비한다</li></ul>",
+    "hasAudio": true,
+    "start": 418.0,
+    "end": 433.0
+  },
+  {
+    "id": "P16",
+    "title": "도시 레벨 디자인의 포인트",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">시야 제약 설계</div><div class=\"card-desc\">지역 간 연결 지점에서 반대편 공간이 시야에 들어오지 않도록 지형, 건물, 골목 구조를 활용해 시야를 자연스럽게 차단한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">유저 동선 분산</div><div class=\"card-desc\">특정 구역에 유저가 과도하게 밀집되지 않도록 기능 건물의 배치와 동선을 전략적으로 설계한다. 서버 부하와 플레이 경험 모두에 영향을 미친다.</div></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2.26C10.19 13.47 9 11.38 9 9a7 7 0 0 1 3-5.74z\"/></svg></div><div class=\"note-content\"><strong>핵심 원칙</strong>: 한 화면에 렌더링 되는 그래픽 양을 최소화하는 것이 최우선이다.<br>특히 자유 시점 카메라가 허용되는 게임일수록 이 원칙은 더움 엄격하게 적용되어야 한다.</div></div>",
+    "hasAudio": true,
+    "start": 433.0,
+    "end": 480.0
+  },
+  {
+    "id": "P17",
+    "title": "건물 배치 및 동선 설계",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">배치 원칙</div></div>\n<ul class=\"slide-points\"><li>엔진 성능을 고려해 한 화면에 렌더링되는 유저/오브젝트 수를 균형 있게 분산한다</li><li>고저차나 복잡한 골목 구조는 최대한 지양하여 길찾기 부담을 줄인다</li><li>대상 유저 레벨이 낮을수록 도시 규모는 작게, 구조는 단순하게 설계한다</li></ul>\n<div class=\"slide-card\"><div class=\"card-heading\">동선 & 랜드마크</div></div>\n<ul class=\"slide-points\"><li>일자형 / 도넛형 동선 : 직관적인 길찾기와 유저 분산에 유리하다</li><li>랜드마크는 도시의 정체성을 시각적으로 드러내며, 자연스러운 길찾기 기준점이 된다</li><li>랜드마크는 가장 넓은 광장 중앙에 배치하여 시야를 제한하고 유저 밀집을 방지한다</li></ul>",
+    "hasAudio": true,
+    "start": 480.0,
+    "end": 490.0
+  },
+  {
+    "id": "P18",
+    "title": "NPC 및 퀘스트 배치",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">분산 배치</div><div class=\"card-desc\">특정 구역에 유저가 과도하게 집중되지 않도록 NPC와 퀘스트를 도시 전역에 전략적으로 분산 배치한다. 서버 부하 감소와 플레이 경험 향상 모두에 기여한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">핵심 NPC 접근성 확보</div><div class=\"card-desc\">스토리 진행에 필수적인 퀘스트 NPC는 반드시 접근성이 높은 위치에 배치한다. 유저가 헤매지 않고 자연스럽게 찾을 수 있어야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">동선 최적화</div><div class=\"card-desc\">NPC 간 이동 거리와 퀘스트 흐름을 고려해 불필요한 이동을 최소화한다. 효율적인 동선 설계는 플레이어의 피로도를 낮추고 몰입감을 높인다.</div></div>",
+    "hasAudio": true,
+    "start": 490.0,
+    "end": 514.0
+  },
+  {
+    "id": "P19",
+    "title": "필드 디자인",
+    "content": "<div class=\"slide-text\">오픈 월드의 핵심 공간인 필드의 역할과 구성 원칙을 이해하고, 플레이어의 탐험/전투/이동 경험을 설계하는 방법을 살펴본다.</div>",
+    "hasAudio": true,
+    "start": 514.0,
+    "end": 522.0
+  },
+  {
+    "id": "P20",
+    "title": "필드의 기능",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">분위기 전달</div><div class=\"card-desc\">지형, 날씨, 조명, 사운드 등 환경 요소를 통해 게임 세계의 분위기를 직관적으로 전달한다. 플레이어가 세계관에 자연스럽게 몰입할 수 있도록 감각적 경험을 설계한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">이동 조절</div><div class=\"card-desc\">지역 간 이동 루트와 진입 조건을 설정하여 플레이어의 진행 속도를 조율한다. 지형적 장벽이나 몬스터 배치를 통해 컨텐츠 소비 흐름을 자연스럽게 유도한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">유저 간 게임플레이 유도</div><div class=\"card-desc\">오픈 필드에서 다수의 유저가 자연스럽게 조우하고 협력/경쟁할 수 있는 환경을 조성한다. 공유 사냥터, 이벤트 구역 등을 통해 커뮤니티 활동을 활성화 한다.</div></div>",
+    "hasAudio": true,
+    "start": 522.0,
+    "end": 534.0
+  },
+  {
+    "id": "P21",
+    "title": "필드 시나리오 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">필드명</div><div class=\"card-desc\">세계관의 역사/지형/문화적 특성을 반영한 고유 명칭을 부여한다. 이름만으로도 해당 필드의 분위기와 정체성이 전달되어야 한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">배경 스토리 & 지리적 구조</div><div class=\"card-desc\">필드가 세계관 내에서 갖는 역사적 맥락과 지리기적 위치를 서술한다. 산맥, 강, 유적 등 지형 구조와 그 형성 배경을 구체적으로 기술한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주요 구조물 & 등장 몬스터</div><div class=\"card-desc\">필드의 정체성을 형성하는 랜드마크와 주요 구조물 목록을 정리한다. 등장 몬스터는 세계관과의 연계성, 레벨 구간, 행동 패턴을 함께 기술한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">연관 스토리 & 퀘스트</div><div class=\"card-desc\">필드에서 발생하는 주요 갈등 요소와 스토리 트리거를 정의한다. 메인/서브 퀘스트의 흐름과 연결 구조를 명확히 설계하여 플레이어의 동기를 유지한다.</div></div>",
+    "hasAudio": true,
+    "start": 534.0,
+    "end": 541.0
+  },
+  {
+    "id": "P22",
+    "title": "필드 비주얼 요소 설정",
+    "content": "<div class=\"slide-text\">필드의 비주얼 요소는 단순한 배경 묘사를 넘어, 아트팀이 실제 작업에 활용할 수 있는 구체적인 아트 디렉션 기준이 되어야 한다. 도시와 동일한 수준의 디테일로 정리한다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">대표 이미지</div><div class=\"card-desc\">필드의 전체적인 분위기와 첫인상을 결정하는 레퍼런스 이미지를 선정한다. 실제 게임 스크린샷, 컨셉 아트, 또는 유사 분위기의 외부 레퍼런스를 활용한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시각적 테마</div><div class=\"card-desc\">필드의 분위기를 함축하는 핵심 키워드와 장면 묘사 문장을 정의한다. 색감, 조명 방향, 날씨, 시간대 등 시각적 톤앤매너를 구체적으로 기술한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">지형 구성물</div><div class=\"card-desc\">바닥 질감(흙, 잔디, 암석 등), 식생(수목, 풀, 이끼 등), 지형 오브젝트(바위, 절벽, 수로 등)를 목록화한다. 각 구성물의 밀도와 배치 원칙도 함께 기술한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주요 오브젝트 & 특징적 구조물</div><div class=\"card-desc\">필드의 정체성을 형성하는 랜드마크와 핵심 소품을 정의한다. 유저가 해당 필드를 기억하게 만드는 시각적 앵커 포인트를 중심으로 구성한다.</div></div>",
+    "hasAudio": true,
+    "start": 541.0,
+    "end": 549.0
+  },
+  {
+    "id": "P23",
+    "title": "필드 게임 플레이 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">기본 수치 & 연결 정보</div></div>\n<ul class=\"slide-points\"><li>규모 및 게임플레이 역할: 필드의 물리적 면적과 전체 플레이어 여정에서의 핵심 역할 정의</li><li>연결되는 도시/던전/타 지역 및 이동 조건: 인접 공간과의 연결 구조, 진입 레벨 제한, 이동 수단 및 특수 조건 명시</li><li>주요 유저 체험 요소: 사냥, 탐험, 채집, 월드 이벤트 등 필드에서 제공하는 핵심 플레이 경험 항목</li></ul>\n<div class=\"slide-card\"><div class=\"card-heading\">구획별 세부 설정</div></div>\n<ul class=\"slide-points\"><li>주요 구획 구분 및 게임플레이 컨셉 : 구획별 명칭 및 플레이 경험 정의</li><li>구획별 유저 레벨, 이용 인원, 이용 시간 : 적정 레벨 구간, 동시 접속 기준, 평균 체류 시간 설정</li><li>구획별 몬스터 리스트 & 레벨 : 등장 종, 레벨 범위, 배치 밀도 및 핵심 행동 패턴 요약</li><li>NPC/퀘스트/인터렉티브 오브젝트 배치 : NPC 역할, 연계 퀘스트, 상호작용 오브젝트 목록</li><li>개략적인 구조도 : 구획 간 연결 관계와 이동 동선을 파악할 수 있는 러프 레이아웃</li></ul>",
+    "hasAudio": true,
+    "start": 549.0,
+    "end": 559.0
+  },
+  {
+    "id": "P24",
+    "title": "필드 레벨 디자인의 포인트",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">구획 간 이동 제한 요소</div><div class=\"card-desc\">지리적 장벽, 강력한 몬스터, 열쇠/아이템 조건, 비행 펫 탑승 등 다양한 제한 장치를  활용해 플레이어의 진행 속도를 자연스럽게 조율한다. 컨텐츠 소비 속도와 성장 곡선을 함께 고려해 설계해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">이동 구획 vs 정지 구획</div><div class=\"card-desc\">사냥/전투/채집이 이루어지는 정지 구획과 이동 전용 동선을 명확히 분리한다. 두 구획의 비율과 배치가 플레이 리듬과 피로도에 직접적인 영향을 미친다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">퀘스트 & 사냥 동선 타당성</div><div class=\"card-desc\">퀘스트 목표 지점 간 이동 거리, 위험 구역 통과 여부, 사냥터와 마을 간 왕복 빈도를 종합적으로 검토한다. 불필요한 이동이 반복되지 않도록 동선의 효율성과 자연스러움을 함께 확보해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">맵 활용성 & 길찾기</div><div class=\"card-desc\">유저가 거의 방문하지 않는 사각지대나 특정 구역에 과도하게 몰리는 현상을 사전에 점검한다. 랜드마크, 미니맵, 시각적 단서를 활용해 직관적인 길찾기 경험을 제공해야 한다.</div></div>",
+    "hasAudio": true,
+    "start": 559.0,
+    "end": 614.0
+  },
+  {
+    "id": "P25",
+    "title": "던전 디자인",
+    "content": "<div class=\"slide-text\">폐쇄적 공간 안에서 긴장감과 몰입을 극대화하는 던전의 구조와 설계 원칙을 이해하고, 플레이어에게 의미 있는 도전 경험을 제공하는 방법을 살펴본다</div>",
+    "hasAudio": true,
+    "start": 614.0,
+    "end": 626.0
+  },
+  {
+    "id": "P26",
+    "title": "던전의 기능",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">체험 대상 규모 제한</div><div class=\"card-desc\">오픈 필드와 달리 던전은 입장 인원, 공간 범위, 컨텐츠 밀도를 의도적으로 제한한다. 이를 통해 플레이어가 집중적인 전투와 탐험에 몰입할 수 있는 긴장감 있는 환경을 조성한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">입장→진행→퇴장</div><div class=\"card-desc\">던전은 입장(준비/진입), 진행(탐험/전투/퍼즐), 퇴장(보상/귀환)의 3단계 구조로 설계된다. 각 단계에 명확한 목적과 보상을 부여해 플레이어의 동기와 성취감을 유지한다.</div></div>",
+    "hasAudio": true,
+    "start": 626.0,
+    "end": 642.0
+  },
+  {
+    "id": "P27",
+    "title": "던전 시나리오 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">던전명</div><div class=\"card-desc\">세계관의 역사/분위기/지형적 특성을 반영한 고유 명칭을 부여한다. 이름만으로도 던전의 성격과 위험도가 직관적으로 전달되어야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">배경 스토리 & 지리적 구조</div><div class=\"card-desc\">던전이 세계관 내에서 만들어진 역사적 맥락과 존재 이유를 서술한다. 입구부터 최심부까지의 공간 구조와 각 구역의 분위기 변화를 함께 기술한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주요 구조물 & 등장 몬스터</div><div class=\"card-desc\">던전의 정체성을 형성하는 핵심 구조물, 트랩, 퍼즐 장치를 목록화한다. 등장 몬스터는 세계관과의 연계성, 레벨 구간, 보스 포함 여부와 행동 패턴을 함께 기술한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">연관 스토리 & 퀘스트</div><div class=\"card-desc\">던전 진입 전후로 연결되는 메인/서브 퀘스트의 흐름을 설계한다. 핵심 갈등 요소와 스토리 트리거를 명확히 정의하여 플레이어가 던전에 입장할 동기를 충분히 부여한다.</div></div>",
+    "hasAudio": true,
+    "start": 642.0,
+    "end": 651.0
+  },
+  {
+    "id": "P28",
+    "title": "던전 비주얼 요소 설정",
+    "content": "<div class=\"slide-text\">도시/필드와 동일한 수준으로 던전 고유의 비주얼 요소를 구체적으로 정리한다.<br>폐쇄적 공간의 특성을 살려 긴장감과 몰입감을 극대화하는 아트 디렉션 기준이 되어야 한다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">대표 이미지</div><div class=\"card-desc\">던전의 전체적인 분위기와 첫인상을 결정하는 레퍼런스 이미지를 선정한다. 실제 게임 스크린샷, 컨셉 아트, 또는 유사 분위기의 외부 레퍼런스를 활용한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시각적 테마</div><div class=\"card-desc\">공포, 신비, 고대 유적, 저주받은 공간 등 던전의 분위기를 함축하는 핵심 키워드와 장면 묘사 문장을 정의한다. 색감, 조명 방향, 안개/먼지 등 대기 효과의 톤앤매너를 구체적으로 기술한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">지형 구성물</div><div class=\"card-desc\">바닥 질감(돌, 흙, 금속 등), 벽면 소재(석재, 나무, 뼈 등), 천장 구조(아치, 동굴, 붕괴 흔적 등)를 목록화한다. 각 구성물의 파손/오염 정도와 배치 밀도도 함께 기술한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">주요 오브젝트 & 특징적 구조물</div><div class=\"card-desc\">함정, 제단, 유물, 보스 등장 구역 등 던전의 정체성을 형성하는 핵심 요소를 정의한다. 플레이어가 해당 던전을 기억하게 만드는 시각적 앵커 포인트를 중심으로 구성한다.</div></div>",
+    "hasAudio": true,
+    "start": 651.0,
+    "end": 658.0
+  },
+  {
+    "id": "P29",
+    "title": "던전 게임 플레이 설정",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">기본 용도 & 역할</div></div>\n<ul class=\"slide-points\"><li>던전 접근 방식 및 규모 : 공용 필드 던전과 인스턴스 던전을 구분하고, 1인용/파티용/레이드용 등 적정 파티 규모를 명확히 정의한다</li><li>게임 플레이 시 핵심 역할 : 캐릭터 성장, 파밍, 스토리 진행, 숙련도 증진 등 전체 게임 흐름에서 본 던전이 담당하는 가치를 설정한다</li><li>주요 유저 체험 요소 : 전투, 퍼즐, 해독, 환경 탐험, 보스 기믹 도전 등 플레이어가 체감하는 핵심 컨텐츠를 목록화한다</li><li>기본 진행 설계 : 던전 입장 조건, 진행 프로세스, 퇴장 방식 및 주요 구획별 역할 분리를 체계적으로 설계한다</li></ul>\n<div class=\"slide-card\"><div class=\"card-heading\">구획별 세부 설정</div></div>\n<ul class=\"slide-points\"><li>구획별 게임플레이 컨셉 : 각 구획이 제공하는 고유한 플레이 경험과 시각적/감각적 분위기 변화를 정의한다</li><li>이용 지표 설정 : 구획별 권장 레벨 범위, 동시 입장 가능 인원, 그리고 회당 평균 클리어 예상 시간을 설정한다</li><li>몬스터 구성 및 배치 : 등장 몬스터의 종류, 레벨 범위, 개체 배치 밀도 및 보스 몬스터의 출현 위치를 기술한다</li><li>상호작용 요소 배치 : 구획 내 배치될 NPC의 역할, 연계 퀘스트, 함정 및 스위치 등 인터렉티브 오브젝트를 구체화한다</li><li>던전 구조도 : 구획 간 연결 관계,  분기 경로, 세이프 존 및 최종 보스 룸 위치를 파악할 수 있는 러프 레이아웃을 구성한다</li></ul>",
+    "hasAudio": true,
+    "start": 658.0,
+    "end": 670.0
+  },
+  {
+    "id": "P30",
+    "title": "던전 레벨 디자인의 포인트",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">인스턴스 던전의 컨셉 명확성</div><div class=\"card-desc\">단순 반복 사냥이 아닌, 던전만의 고유한 테마와 목적이 명확해야 한다. 전투, 퍼즐, 탐험, 스토리 등 다양한 게임 요소를 유기적으로 결합하여 플레이어가 매 입장마다 의미 있는 경험을 느낄 수 있도록 설계한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">의미 없는 막다른 골목 제거</div><div class=\"card-desc\">목적 없이 막힌 공간은 플레이어의 흐름을 끊고 피로감을 유발한다. 모든 경로에 탐험 보상이나 스토리 단서를 배치하고, 이정표 역할을 하는 지형/구조물로 방향성을 명확히 제시한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">적절한 층 구분</div><div class=\"card-desc\">단일 층으로 구성된 지나치게 긴 던전은 플레이어의 집중력과 몰입감을 저하시킨다. 층 단위로 공간을 분리하고 각 층마다 고유한 분위기와 도전 요소를 부여해 자연스러운 플레이 리듬을 형성한다</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">안전 지대 & 보스 준비 구간</div><div class=\"card-desc\">각 층 입구나 보스 룸 직전에 안전 지대를 배치하여 플레이어가 회복/준비할 수 있는 여유를 제공한다. 보스 전투 전 충분한 긴장감 조성과 함께 전략을 수립할 시간을 보장하는 것이 핵심이다.</div></div>",
+    "hasAudio": true,
+    "start": 670.0,
+    "end": 737.0
+  }
+];
+const TRANSCRIPT = [{"start": 0.0, "end": 5.6000000000000005, "text": "당신이 평소 즐겨하던 오픈월드 게임의 한 장면을 한번 떠올려 보시죠."}, {"start": 5.6000000000000005, "end": 9.700000000000001, "text": "깎아지른 듯한 절벽 끝에 서서 아래를 딱 내려다 보면"}, {"start": 9.700000000000001, "end": 14.280000000000001, "text": "저 멀리 숲 너머로 웅장한 대도시의 첨탑이 보이는 그런 장면이요."}, {"start": 14.280000000000001, "end": 17.28, "text": "아, 아주 익숙한 풍경이네요."}, {"start": 17.28, "end": 20.080000000000002, "text": "아마 대부분은 그 광경을 보면서"}, {"start": 20.080000000000002, "end": 23.04, "text": "와, 그래픽 진짜 미쳤다."}, {"start": 23.04, "end": 26.740000000000002, "text": "아트팀이 영혼을 갈아 넣었네. 하고 감탄하실 겁니다."}, {"start": 26.74, "end": 31.419999999999998, "text": "맞아요. 마치 미술관에 걸린 정교한 풍경화를 감상하는 것처럼 말이죠."}, {"start": 31.419999999999998, "end": 33.339999999999996, "text": "우리에게 그 세계는..."}, {"start": 33.339999999999996, "end": 34.42, "text": "음..."}, {"start": 34.42, "end": 38.62, "text": "완전한 자유가 보장된 상상력의 결정체처럼 느껴지거든요."}, {"start": 38.62, "end": 41.44, "text": "네, 그건 아주 자연스러운 반응입니다."}, {"start": 41.44, "end": 45.379999999999995, "text": "유저 입장에서는 그 세계가 시각적인 경이로움이자"}, {"start": 45.379999999999995, "end": 48.72, "text": "탐험하고 싶은 미지의 공간으로 다가와야 하니까요."}, {"start": 48.72, "end": 52.480000000000004, "text": "내가 지금 이 세계를 자유롭게 모험하고 있다고 믿게 만드는 것"}, {"start": 52.480000000000004, "end": 54.78, "text": "그게 훌륭한 게임의 조건이기도 하고요."}, {"start": 54.82, "end": 59.32, "text": "하지만 오늘 우리가 아주 깊게 파헤칠 이 자료의 세계로 들어오면"}, {"start": 59.32, "end": 61.72, "text": "당신이 느꼈던 그 자유라는 감정이"}, {"start": 61.72, "end": 66.02, "text": "사실 얼마나 철저하게 계산된 환상인지 깨닫게 되실 겁니다."}, {"start": 66.02, "end": 68.28, "text": "네, 완전히 기계적인 계산이죠."}, {"start": 68.28, "end": 71.48, "text": "오늘 이 심층 분석에서 다룰 자료는"}, {"start": 71.48, "end": 75.78, "text": "게임 기획을 처음 배우는 학생들을 위한 지역 디자인 강의안입니다."}, {"start": 75.78, "end": 79.82, "text": "분량이 꽤 되는데 저희 미션은 이 강의 자료에 담긴 모든 개념"}, {"start": 79.82, "end": 82.78, "text": "그러니까 1페이지부터 마지막 30페이지까지"}, {"start": 82.78, "end": 86.52, "text": "단 하나의 개념도 빠짐없이 완벽하게 해부해보는 겁니다."}, {"start": 86.52, "end": 88.72, "text": "아, 정말 기대가 됩니다."}, {"start": 88.72, "end": 92.48, "text": "1페이지를 보면 이 자료가 흥미로운 이유가 바로 나오는데요."}, {"start": 92.48, "end": 96.78, "text": "월드 빌딩이 단순히 예쁜 지도를 그리는 미술 시간이 아니라는 걸"}, {"start": 96.78, "end": 98.78, "text": "적나라하게 보여주거든요."}, {"start": 98.78, "end": 102.02000000000001, "text": "그렇죠. 저 멀리 보이던 아름다운 산맥은"}, {"start": 102.02000000000001, "end": 105.42, "text": "당신의 이동 시간을 지연시키기 위한 통제선이고"}, {"start": 105.42, "end": 108.42, "text": "웅장한 첨탑은 컴퓨터 과부하를 막기 위한"}, {"start": 108.42, "end": 110.92, "text": "거대한 가림막이라는 걸 알게 되실 겁니다."}, {"start": 110.92, "end": 114.66, "text": "맞습니다. 이건 플레이어의 심리와 경험"}, {"start": 114.66, "end": 117.92, "text": "그리고 개발팀의 예산과 하드웨어 한계까지"}, {"start": 117.92, "end": 121.82000000000001, "text": "완벽하게 통제하는 고도의 심리학이자 공학입니다."}, {"start": 121.82000000000001, "end": 125.26, "text": "그럼 세계를 창조하는 첫 번째 단계부터 짚어보죠."}, {"start": 125.26, "end": 127.36, "text": "이 거대한 뼈대를 세우기 위해"}, {"start": 127.36, "end": 129.96, "text": "기획자들이 제일 먼저 하는 고민은 뭘까요?"}, {"start": 129.96, "end": 133.32, "text": "아무래도 약간 어떤 멋진 배경을 그릴까부터?"}, {"start": 133.32, "end": 135.48000000000002, "text": "놀랍게도 그 첫 번째 고민은"}, {"start": 135.48000000000002, "end": 138.12, "text": "예술이 아니라 철저한 산수입니다."}, {"start": 138.12, "end": 142.56, "text": "2페이지를 보면 지역 디자인의 3대 목적이 나오는데요."}, {"start": 142.56, "end": 145.82, "text": "컨텐츠의 배치와 배분, 리소스 산정"}, {"start": 145.82, "end": 149.12, "text": "그리고 세부 레벨 디자인의 방향성 설정입니다."}, {"start": 149.12, "end": 152.46, "text": "리소스 산정이요? 그러니까 맵 하나 만드는데"}, {"start": 152.46, "end": 154.96, "text": "그래픽 디자이너가 몇 명 필요하고"}, {"start": 154.96, "end": 157.68, "text": "며칠이 걸릴지 예산부터 계산한다는 건가요?"}, {"start": 157.68, "end": 161.26, "text": "정확합니다. 개발 계획의 기초공사죠."}, {"start": 161.26, "end": 163.86, "text": "그리고 3페이지에서 더 중요하게 다루는 건"}, {"start": 163.86, "end": 165.96, "text": "플레이타임의 계산입니다."}, {"start": 165.96, "end": 171.06, "text": "MMO인지 싱글 플레이인지 같은 세계관과 규모를 정하고 나면"}, {"start": 171.06, "end": 175.10000000000002, "text": "유저가 총 몇 시간을 소비하게 만들 것인가를 결정하거든요."}, {"start": 175.10000000000002, "end": 178.66, "text": "아, 만약 타겟 플레이 타임이 100시간이라면"}, {"start": 178.66, "end": 180.76000000000002, "text": "그걸 채우기 위해 전체 월드를"}, {"start": 180.76000000000002, "end": 182.86, "text": "어떻게 쪼갤지부터 계산한다는 거군요?"}, {"start": 182.86, "end": 183.96, "text": "네, 맞아요."}, {"start": 183.96, "end": 188.72, "text": "4페이지를 보면 그 전체 월드를 구성하는 3대 공간이 나옵니다."}, {"start": 188.72, "end": 191.8, "text": "바로 도시, 필드, 던전이죠."}, {"start": 191.8, "end": 194.72, "text": "타겟 유저 설정이나 지역 간 연결 경로도"}, {"start": 194.72, "end": 196.52, "text": "여기서 다 조건이 잡힙니다."}, {"start": 196.52, "end": 199.72, "text": "그러니까 제가 100시간 동안 꼼꼼하게 탐험한 게 아니라"}, {"start": 199.72, "end": 203.48, "text": "처음부터 기획자가 100시간을 쓰도록 동선을 설계했다는 거네요?"}, {"start": 203.48, "end": 206.66, "text": "5페이지를 보니까 시나리오 설정도 아주 치밀하던데요?"}, {"start": 206.66, "end": 210.42, "text": "그럼요. 직관적 기대감을 주는 지역명이나"}, {"start": 210.42, "end": 213.48, "text": "서사에 토대가 되는 배경 스토리를 짭니다."}, {"start": 213.48, "end": 217.96, "text": "지리적 특징과 역사를 바탕으로 레벨 디자인의 기준을 세우는 거죠."}, {"start": 217.96, "end": 221.82, "text": "6페이지의 비주얼 요소도 막 (그렇게) 그리는 게 아니더라고요."}, {"start": 221.82, "end": 226.72, "text": "핵전쟁 이후 버려진 공항을 무성한 덩굴 식물이 뒤덮고 있다 이런 식으로"}, {"start": 226.72, "end": 230.26, "text": "방향성의 기준이 되는 명확한 시각적 테마를 설정하잖아요?"}, {"start": 230.26, "end": 231.51999999999998, "text": "맞습니다."}, {"start": 231.51999999999998, "end": 235.32, "text": "자연물이나 건축 양식도 다 그 테마를 따르고요."}, {"start": 235.32, "end": 239.78, "text": "여기서 중요한 건 7페이지에 나오는 게임 플레이 설정입니다."}, {"start": 239.78, "end": 242.66, "text": "레벨 구간 같은 기획적 수치도 중요하지만"}, {"start": 242.66, "end": 247.06, "text": "이런 시각적 요소가 결국 유저 관점의 체험 요소와 직결되거든요."}, {"start": 247.06, "end": 247.57999999999998, "text": "잠깐만요."}, {"start": 247.58, "end": 250.78, "text": "덩굴 식물 하나 부서진 콘크리트 조각하나도"}, {"start": 250.78, "end": 254.02, "text": "제 감정을 조종해서 특정 행동 패턴을 유도한다는 건가요?"}, {"start": 254.02, "end": 254.78, "text": "네."}, {"start": 254.78, "end": 258.82, "text": "으스스한 분위기를 주면 유저가 조심스럽게 은신하거나"}, {"start": 258.82, "end": 261.78000000000003, "text": "주변을 더 꼼꼼히 탐색하게 되니까요."}, {"start": 261.78000000000003, "end": 266.24, "text": "결국 이 모든 건 컨텐츠 소비 속도를 통제하기 위한 장치입니다."}, {"start": 266.24, "end": 266.84000000000003, "text": "와."}, {"start": 266.84000000000003, "end": 271.62, "text": "놀이공원의 롤러코스터랑 츄러스 가게의 위치를 기획하는 거랑 비슷하네요."}, {"start": 271.62, "end": 273.74, "text": "자 이제 8페이지로 넘어가면"}, {"start": 273.74, "end": 276.68, "text": "눈에 보이는 세계관을 컴퓨터가 이해할 수 있는"}, {"start": 276.68, "end": 278.94, "text": "수학적 구조로 변환하는 작업이 나옵니다."}, {"start": 278.94, "end": 281.38, "text": "네. 이른바 맵 시스템이죠."}, {"start": 281.38, "end": 286.88, "text": "8페이지의 핵심은 위치, 이동, 연결의 체계적 정의입니다."}, {"start": 286.88, "end": 290.04, "text": "게임이 작동하기 위한 아주 뼈대가 되는 작업이에요."}, {"start": 290.04, "end": 293.6, "text": "9페이지를 보면 두 가지 거대한 질문에서 출발하잖아요."}, {"start": 293.6, "end": 295.90000000000003, "text": "구조를 짜는 테이블 설계랑"}, {"start": 295.90000000000003, "end": 298.64, "text": "미니 맵 같은 활용 콘텐츠를 도출하는 거요?"}, {"start": 298.64, "end": 299.8, "text": "맞습니다."}, {"start": 299.8, "end": 304.5, "text": "화려한 영화 세트장 뒤편에 복잡한 철골 구조를 세우는 것과 같죠."}, {"start": 304.5, "end": 308.74, "text": "10페이지에 나오는 설정 체크리스트를 보면 정말 엄청나게 세밀합니다."}, {"start": 308.74, "end": 312.04, "text": "평면으로 할지 고저차가 있는 3D로 할지"}, {"start": 312.04, "end": 313.94, "text": "위치 정의 방식도 정하고"}, {"start": 313.94, "end": 316.74, "text": "몬스터나 NPC 배치 종류도 정하고요."}, {"start": 316.74, "end": 319.40000000000003, "text": "심지어 날씨 변화까지 여기서 시스템화 하더라고요."}, {"start": 319.40000000000003, "end": 323.3, "text": "네. 거기서 특히 중요한 질문이 하나 제기되는데요."}, {"start": 323.3, "end": 326.7, "text": "바로 특수 이동 방식과 맵 간 이동 방식입니다."}, {"start": 326.7, "end": 330.0, "text": "class를 분리할 건지 통합할 건지 정하고"}, {"start": 330.0, "end": 332.44, "text": "유저가 날아다닐 수 있게 할 것인가"}, {"start": 332.44, "end": 335.09999999999997, "text": "그리고 맵을 넘어갈 때 심리스로 할 것인가"}, {"start": 335.09999999999997, "end": 337.24, "text": "포털을 쓸 것인가 하는 문제죠."}, {"start": 337.24, "end": 341.2, "text": "저는 솔직히 이동 방식이 그렇게 큰 영향을 주나 싶었거든요."}, {"start": 341.2, "end": 343.64, "text": "그냥 비행 탈 것 하나 추가하는 거 아닌가요?"}, {"start": 343.64, "end": 345.64, "text": "엄청난 차이를 만듭니다."}, {"start": 345.64, "end": 348.2, "text": "기획자가 땅바닥에 며칠 밤을 세워서"}, {"start": 348.2, "end": 351.74, "text": "절묘한 미로 퍼즐과 몬스터를 배치해뒀는데"}, {"start": 351.74, "end": 355.0, "text": "유저가 그냥 하늘로 슝 날아가 버리면 어떻게 될까요?"}, {"start": 355.0, "end": 359.0, "text": "아... 땅 위에 모든 레벨 디자인이 완전히 무용지물이 되네요."}, {"start": 359.0, "end": 362.0, "text": "그렇죠. 이동 로직 하나가 게임의 난이도를"}, {"start": 362.0, "end": 364.24, "text": "완전히 붕괴시킬 수 있습니다."}, {"start": 364.24, "end": 367.3, "text": "그리고 심리스냐 로딩 화면이냐 하는 부분도"}, {"start": 367.3, "end": 369.9, "text": "유저의 몰입도와 서버 부하 사이에서"}, {"start": 369.9, "end": 373.1, "text": "아주 치열하게 타협해야 하는 시스템적 규칙이죠."}, {"start": 373.1, "end": 375.26, "text": "심리스가 몰입은 잘 되지만"}, {"start": 375.26, "end": 378.14, "text": "컴퓨터나 서버가 감당하기 힘들다는 거군요."}, {"start": 378.14, "end": 381.06, "text": "기획자는 진짜 끝없이 줄타기를 하는 직업이네요."}, {"start": 381.06, "end": 383.16, "text": "자, 이제 11페이지부터는"}, {"start": 383.16, "end": 385.40000000000003, "text": "드디어 플레이어가 가장 먼저 발을 딛는"}, {"start": 385.40000000000003, "end": 388.40000000000003, "text": "안도감의 공간, 도시 디자인으로 들어갑니다."}, {"start": 388.40000000000003, "end": 390.76000000000005, "text": "네, 11페이지와 12페이지에서는"}, {"start": 390.76000000000005, "end": 393.76000000000005, "text": "도시의 4대 기능을 명확하게 정의합니다."}, {"start": 393.76000000000005, "end": 396.22, "text": "전투 후 정비를 위한 재충전,"}, {"start": 396.22, "end": 398.6, "text": "퀘스트의 출발점과 귀환점,"}, {"start": 398.6, "end": 400.1, "text": "세계관에 대한 몰입,"}, {"start": 400.1, "end": 403.42, "text": "그리고 커뮤니티 활동의 사회적 허브 역할이죠."}, {"start": 403.42, "end": 405.76000000000005, "text": "그래서 이제 13페이지랑 14페이지를 보면"}, {"start": 405.76000000000005, "end": 408.86, "text": "시나리오랑 비주얼 설정도 정말 구체적이에요."}, {"start": 408.86, "end": 411.76000000000005, "text": "빈 드럼통이나 낡은 우체통 같은 구조물이나"}, {"start": 411.76, "end": 414.2, "text": "갈등 요소를 넣어서 시각적 테마를"}, {"start": 414.2, "end": 416.26, "text": "아주 디테일하게 설정하더라고요."}, {"start": 416.26, "end": 418.62, "text": "아트의 출발점인 대표 이미지도 잡고요."}, {"start": 418.62, "end": 420.36, "text": "맞아요. 그리고 15페이지에서는"}, {"start": 420.36, "end": 422.52, "text": "성장 범위나 적정 인원,"}, {"start": 422.52, "end": 425.26, "text": "상점 같은 핵심 서비스 건물의 위치 등"}, {"start": 425.26, "end": 427.06, "text": "게임 플레이 설정을 짜고요."}, {"start": 427.06, "end": 430.71999999999997, "text": "퀘스트 흐름과 동선 구조도 설계가 여기서 다 이루어집니다."}, {"start": 430.71999999999997, "end": 433.76, "text": "그런데 여기서 진짜 흥미로운 부분이 나옵니다."}, {"start": 433.76, "end": 435.82, "text": "16페이지와 17페이지의"}, {"start": 435.82, "end": 438.46, "text": "레벨 디자인과 동선 원칙이요."}, {"start": 438.46, "end": 440.36, "text": "도시는 무조건 넓게 탁 트이고"}, {"start": 440.36, "end": 442.26, "text": "웅장해야 멋있는 거 아닌가요?"}, {"start": 442.26, "end": 444.86, "text": "시야 제약 설계라니 좀 답답한데요?"}, {"start": 444.86, "end": 446.96000000000004, "text": "이걸 큰 그림과 연결해보면"}, {"start": 446.96000000000004, "end": 449.46000000000004, "text": "완전히 다른 이야기가 됩니다."}, {"start": 449.46000000000004, "end": 451.7, "text": "자유 시점 카메라 게임에서"}, {"start": 451.7, "end": 453.66, "text": "도시가 한눈에 다 보이면"}, {"start": 453.66, "end": 456.66, "text": "당신의 컴퓨터 엔진이 폭발할 수도 있거든요."}, {"start": 456.66, "end": 458.92, "text": "아, 한 화면에 렌더링해야 할 그래픽이"}, {"start": 458.92, "end": 460.46000000000004, "text": "한꺼번에 너무 많아져서요?"}, {"start": 460.46000000000004, "end": 461.86, "text": "정확합니다."}, {"start": 461.86, "end": 465.5, "text": "그래서 개발자들은 서버 부하를 줄이기 위해"}, {"start": 465.5, "end": 469.62, "text": "의도적으로 광장 중앙에 거대한 랜드마크를 박아서"}, {"start": 469.72, "end": 472.92, "text": "시야를 제한하는 놀라운 기만수(컬링)를 씁니다."}, {"start": 472.92, "end": 475.62, "text": "렌더링되는 그래픽을 최소화하는 거죠."}, {"start": 475.62, "end": 477.82, "text": "와, 웅장한 동상이 사실은"}, {"start": 477.82, "end": 480.82, "text": "제 컴퓨터를 지키는 가림막이었던 게 충격이네요."}, {"start": 480.82, "end": 482.52, "text": "복잡한 골목을 지향하고"}, {"start": 482.52, "end": 485.02, "text": "일자형이나 도넛형으로 설계하는 것도"}, {"start": 485.02, "end": 486.72, "text": "동선을 분산시키기 위해서고요?"}, {"start": 486.72, "end": 490.72, "text": "네, 길찾기에 기준점을 만들어주는 겁니다."}, {"start": 490.72, "end": 495.32, "text": "18페이지의 NPC와 퀘스트 배치 원칙도 마찬가지예요."}, {"start": 495.32, "end": 498.82, "text": "유저 집중 방지를 위해 분산 배치하고"}, {"start": 498.82, "end": 501.32, "text": "필수 NPC 접근성을 확보해서"}, {"start": 501.32, "end": 505.02, "text": "불필요한 이동을 줄이는 동선 최적화를 하는 거죠."}, {"start": 505.02, "end": 509.21999999999997, "text": "제가 심부름꾼이라서 마을 끝에서 끝으로 이리저리 뛰어다닌 게 아니라"}, {"start": 509.21999999999997, "end": 512.22, "text": "그게 다 서버 관리 기법이었다는 게 참 허탈하네요."}, {"start": 512.22, "end": 514.62, "text": "자, 이제 제한적인 도시를 벗어나서"}, {"start": 514.62, "end": 517.3199999999999, "text": "모험의 무대인 필드로 나가는 19페이지입니다."}, {"start": 517.3199999999999, "end": 522.3199999999999, "text": "필드야말로 정말 가장 정교하게 짜인 통제구역입니다."}, {"start": 522.3199999999999, "end": 525.02, "text": "19페이지부터 21페이지를 보면"}, {"start": 525.02, "end": 527.52, "text": "장벽이나 몬스터 배치를 통해서"}, {"start": 527.52, "end": 529.42, "text": "유저의 이동을 조절하고"}, {"start": 529.42, "end": 532.8199999999999, "text": "조우나 협력을 유도하는 게 핵심 기능이거든요."}, {"start": 532.8199999999999, "end": 534.42, "text": "분위기 전달은 물론이고"}, {"start": 534.42, "end": 539.72, "text": "필드명, 역사적 배경, 랜드마크, 등장 몬스터와 연관 스토리 설계까지"}, {"start": 539.72, "end": 541.22, "text": "다 여기서 짜여지죠."}, {"start": 541.22, "end": 543.62, "text": "22페이지랑 23페이지를 보면"}, {"start": 543.62, "end": 547.02, "text": "비주얼 테마나 면적, 인접구역 연결 조건,"}, {"start": 547.02, "end": 549.8199999999999, "text": "구획별 컨셉도 아주 철저하게 나누더라고요."}, {"start": 549.8199999999999, "end": 553.92, "text": "네, 바닥 질감이나 식생 같은 시각적 앵커 포인트도 주고"}, {"start": 553.92, "end": 559.2199999999999, "text": "적정 레벨이나 체류 시간, 몬스터나 NPC 배치도 다 세팅합니다."}, {"start": 559.2199999999999, "end": 562.62, "text": "24페이지의 레벨 디자인 포인트가 제일 중요한데요."}, {"start": 562.62, "end": 566.02, "text": "바로 정지구획과 이동구획의 명확한 분리입니다."}, {"start": 566.02, "end": 569.2199999999999, "text": "정지구획은 사냥이나 채집을 하는 곳이고"}, {"start": 569.2199999999999, "end": 572.7199999999999, "text": "이동구획은 말 그대로 목적지를 향해 지나가는 길인 거죠."}, {"start": 572.7199999999999, "end": 575.12, "text": "이거 약간 고속도로의 톨게이트나"}, {"start": 575.12, "end": 577.2199999999999, "text": "휴게소 설계하는 교통공학 같아요."}, {"start": 577.2199999999999, "end": 579.2199999999999, "text": "아주 찰떡같은 비유네요."}, {"start": 579.2199999999999, "end": 582.7199999999999, "text": "만약 이동구획에 강력한 몬스터를 빽빽하게 깔아두면"}, {"start": 582.72, "end": 586.02, "text": "바쁘게 지나가는 유저의 피로도가 극에 달할 겁니다."}, {"start": 586.02, "end": 589.72, "text": "반대로 사냥터의 밀도가 낮으면 성장이 늦어지겠죠."}, {"start": 589.72, "end": 593.12, "text": "비행팻 같은 요소로 진행 속도도 조율해야 하고요."}, {"start": 593.12, "end": 597.22, "text": "아, 퀘스트랑 사냥터 왕복 동선이 타당한지 검토하고"}, {"start": 597.22, "end": 601.9200000000001, "text": "맵 사각 지대나 너무 밀집되는 걸 막는 길찾기 최적화도 그런 맥락이군요."}, {"start": 601.9200000000001, "end": 603.12, "text": "맞습니다."}, {"start": 603.12, "end": 607.02, "text": "필드의 장애물이나 몬스터는 유저를 괴롭히려는 게 아니라"}, {"start": 607.02, "end": 610.72, "text": "컨텐츠 소비 속도와 성장 곡선을 절묘하게 맞추기 위한"}, {"start": 610.72, "end": 612.8199999999999, "text": "개발자의 보이지 않는 손인 셈이죠."}, {"start": 612.8199999999999, "end": 614.02, "text": "정말 치밀하네요."}, {"start": 614.02, "end": 617.22, "text": "자, 방대한 필드에서 충분히 성장했다면"}, {"start": 617.22, "end": 620.12, "text": "이제 서사의 클라이맥스를 맞이할 시간입니다."}, {"start": 620.12, "end": 624.92, "text": "마지막으로 25페이지부터 자료 끝인 30페이지까지 이어지는"}, {"start": 624.92, "end": 626.12, "text": "던전 디자인입니다."}, {"start": 626.12, "end": 631.42, "text": "네, 던전은 체험 대상 규모, 그러니까 인원과 공간을 의도적으로 제한해서"}, {"start": 631.42, "end": 633.8199999999999, "text": "극한의 긴장감을 주는 곳입니다."}, {"start": 633.8199999999999, "end": 636.52, "text": "25페이지부터 27페이지를 보면"}, {"start": 636.52, "end": 639.42, "text": "입장해서 준비하고 진행하면서 탐험하고"}, {"start": 639.42, "end": 642.72, "text": "퇴장하며 보상을 얻는 명확한 3단계 구조를 가지죠."}, {"start": 642.72, "end": 647.02, "text": "던전 존재 이후부터 위험도를 보여주는 이름, 함정, 퍼즐,"}, {"start": 647.02, "end": 651.52, "text": "보스 몬스터, 그리고 유저를 이끄는 스토리 트리거까지 다 짜여있잖아요."}, {"start": 651.52, "end": 655.42, "text": "28-29페이지에서는 폐쇄성에 맞는 질감과 조명,"}, {"start": 655.42, "end": 657.42, "text": "시각적 앵커 포인트까지 나오고요."}, {"start": 657.42, "end": 658.42, "text": "맞습니다."}, {"start": 658.42, "end": 662.02, "text": "인스턴스 던전인지 필드 던전인지도 구분하고"}, {"start": 662.02, "end": 665.8199999999999, "text": "권장 레벨과 클리어 타임, 구획별 플레이 컨셉,"}, {"start": 665.82, "end": 670.5200000000001, "text": "분기 경로나 보스룸 설계까지 아주 꼼꼼하게 세팅해야 하죠."}, {"start": 670.5200000000001, "end": 673.32, "text": "그런데 30페이지 레벨 디자인 포인트에서"}, {"start": 673.32, "end": 675.62, "text": "되게 도발적인 원칙을 봤어요."}, {"start": 675.62, "end": 678.22, "text": "의미 없는 막다른 골목 제거라뇨?"}, {"start": 678.22, "end": 681.82, "text": "원래 던전은 길이 복잡하고 막다른 골목에서 꽝!"}, {"start": 681.82, "end": 683.62, "text": "하고 해매는 맛이 있어야 하는 거 아닌가요?"}, {"start": 683.62, "end": 688.12, "text": "하하, 그게 바로 기획 초보들이 가장 많이 하는 착각입니다."}, {"start": 688.12, "end": 690.62, "text": "아무 보상도 없는 막다른 골목은"}, {"start": 690.62, "end": 693.72, "text": "유저의 몰입을 깨고 피로도만 유발할 뿐이거든요."}, {"start": 693.72, "end": 696.4200000000001, "text": "아, 그래서 단순 사냥을 배제하고"}, {"start": 696.4200000000001, "end": 699.82, "text": "인스턴스 던전만의 명확한 컨셉을 주라는 거군요."}, {"start": 699.82, "end": 702.62, "text": "층을 적절히 구분해서 집중력 저하도 막아주고요."}, {"start": 702.62, "end": 705.9200000000001, "text": "네. 그리고 30페이지 자료의 또 다른 핵심이"}, {"start": 705.9200000000001, "end": 710.4200000000001, "text": "바로 보스룸 직전의 안전지대, 세이프 존 배치입니다."}, {"start": 710.4200000000001, "end": 712.12, "text": "이게 단순히 포션 먹고"}, {"start": 712.12, "end": 714.9200000000001, "text": "버프 갈라고 주는 단순한 배려가 아니에요."}, {"start": 714.9200000000001, "end": 717.62, "text": "어, 그럼 기획적으로 뭐 다른 의도가 있는 건가요?"}, {"start": 717.62, "end": 720.02, "text": "극한의 텐션으로 넘어가게 직전에"}, {"start": 720.02, "end": 722.4200000000001, "text": "역설적인 고요함을 주어서"}, {"start": 722.42, "end": 725.92, "text": "심리적인 대비 효과를 극대화하는 장치입니다."}, {"start": 725.92, "end": 727.7199999999999, "text": "긴장감을 폭발시키기 위해"}, {"start": 727.7199999999999, "end": 731.02, "text": "의도적으로 이완의 공간을 먼저 배치하는 거죠."}, {"start": 731.02, "end": 733.7199999999999, "text": "와, 진짜 기획자들 무서운 사람들이네요."}, {"start": 733.7199999999999, "end": 737.02, "text": "유저의 심리까지 완전히 가지고 노는 수준이잖아요."}, {"start": 737.02, "end": 739.3199999999999, "text": "오늘 저희가 지역 디자인 강의자료를 쭉 따라가며"}, {"start": 739.3199999999999, "end": 741.3199999999999, "text": "관통한 핵심은 이거 같습니다."}, {"start": 741.3199999999999, "end": 744.8199999999999, "text": "지역 기획이라는 건 단순히 예쁜 그림을 그리는 게 아니라"}, {"start": 744.8199999999999, "end": 748.8199999999999, "text": "유저들의 감정과 동선, 그리고 컴퓨터 엔진의 부하까지"}, {"start": 748.8199999999999, "end": 752.3199999999999, "text": "완벽하게 통제하는 아주 치밀한 공학적 설계라는 거죠."}, {"start": 752.32, "end": 754.32, "text": "정확하게 짚으셨습니다."}, {"start": 754.32, "end": 758.32, "text": "이 모든 기획의 본질은 결국 유저가 지루할 틈 없이"}, {"start": 758.32, "end": 760.32, "text": "그러나 결코 피로하지 않게"}, {"start": 760.32, "end": 763.5200000000001, "text": "이 게임 세계를 계속해서 여행하게 만드는 거거든요."}, {"start": 763.5200000000001, "end": 766.32, "text": "정말 놀라운 심층 탐험이었습니다."}, {"start": 766.32, "end": 768.62, "text": "오늘 이 이야기를 다 듣고 나니"}, {"start": 768.62, "end": 772.12, "text": "여러분께 이런 도발적인 질문을 하나 던지고 싶네요."}, {"start": 772.12, "end": 775.9200000000001, "text": "우리가 매일 걷는 출근길이나 자주 가는 대형마트"}, {"start": 775.9200000000001, "end": 779.62, "text": "휴식을 취하는 카페 같은 이 현실세계의 구조 말입니다."}, {"start": 779.62, "end": 781.62, "text": "네, 어쩌면 거기도 누군가의..."}, {"start": 781.62, "end": 786.12, "text": "맞아요. 이 현실 역시 누군가의 철저한 레벨 디자인에 의해서"}, {"start": 786.12, "end": 789.62, "text": "우리의 감정과 지갑을 통제하고 있는 건 아닐까요?"}, {"start": 789.62, "end": 792.32, "text": "다음번에 복잡한 골목길이나"}, {"start": 792.32, "end": 795.82, "text": "광장 한가운데에 거대한 랜드마크를 마주치게 된다면"}, {"start": 795.82, "end": 797.82, "text": "한번 의심해 보시길 바랍니다."}];
+
+let currentSlide = 0;
+let isAutoSync = true;
+let lastSubIdx = -1;
+const audio = document.getElementById('audio');
+const playBtn = document.getElementById('play-btn');
+const ICON_PLAY  = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg>';
+const ICON_PAUSE = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="1" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="7.5" y="1" width="3.5" height="12" rx="1" fill="currentColor"/></svg>';
+const timeDisplay = document.getElementById('time-display');
+const seekBar = document.getElementById('seek-bar');
+
+// 오디오 포함 슬라이드를 시작시간 순으로 정렬한 인덱스 (동기화용)
+const audioSlides = SLIDES
+    .map((s, i) => ({idx: i, start: s.start, end: s.end, hasAudio: s.hasAudio}))
+    .filter(s => s.hasAudio && s.start !== null)
+    .sort((a, b) => a.start - b.start);
+
+function init() {
+    buildNav();
+    buildIndex();
+    buildAudioMap();
+    showSlide(0);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    // 오디오 메타데이터 로드 시 시크바 max 갱신
+    audio.addEventListener('loadedmetadata', updateSeekBarMax);
+    audio.addEventListener('durationchange', updateSeekBarMax);
+    // canplay 이벤트도 대비 (일부 브라우저/포맷에서 loadedmetadata가 늦게 발생)
+    audio.addEventListener('canplay', updateSeekBarMax);
+    // 슬라이더 드래그 시: 오디오 위치 이동 + 즉시 슬라이드 동기화
+    seekBar.addEventListener('input', () => {
+        audio.currentTime = seekBar.value;
+        isAutoSync = true;
+        syncSlideToTime(audio.currentTime);
+        updateSubtitle(audio.currentTime);
+    });
+    // 일시정지 상태에서 seek 완료 시에도 슬라이드 동기화
+    audio.addEventListener('seeked', () => {
+        syncSlideToTime(audio.currentTime);
+        updateTimeDisplay();
+        updateSubtitle(audio.currentTime);
+    });
+}
+
+function updateSeekBarMax() {
+    if (audio.duration && isFinite(audio.duration)) {
+        seekBar.max = audio.duration;
+        updateTimeDisplay();
+    }
+}
+
+function buildNav() {
+    const nav = document.getElementById('slide-nav');
+    SLIDES.forEach((slide, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'nav-dot ' + (slide.hasAudio ? 'has-audio' : 'no-audio');
+        dot.textContent = slide.id.replace('P', '');
+        dot.title = slide.id + ' — ' + slide.title;
+        dot.onclick = () => { isAutoSync = false; showSlide(i); };
+        nav.appendChild(dot);
+    });
+}
+
+function buildIndex() {
+    const list = document.getElementById('index-list');
+    SLIDES.forEach((slide, i) => {
+        const item = document.createElement('div');
+        item.className = 'index-item' + (slide.hasAudio ? ' has-audio' : '');
+        item.innerHTML = '<span class="idx-id">' + slide.id + '</span><span class="idx-title">' + slide.title + '</span>';
+        item.onclick = () => { isAutoSync = false; showSlide(i); };
+        list.appendChild(item);
+    });
+}
+
+function buildAudioMap() {
+    const map = document.getElementById('audio-map');
+    if (!map) return;
+    let prevEnd = 0;
+    audioSlides.forEach((s, i) => {
+        const slide = SLIDES[s.idx];
+        const duration = s.end - s.start;
+        // 시간 갭이 있으면 빈 공간 삽입
+        if (s.start > prevEnd + 1) {
+            const gap = document.createElement('div');
+            gap.className = 'map-gap';
+            gap.style.flexGrow = (s.start - prevEnd).toFixed(1);
+            map.appendChild(gap);
+        }
+        const seg = document.createElement('div');
+        seg.className = 'map-segment';
+        seg.dataset.idx = s.idx;
+        seg.style.flexGrow = duration.toFixed(1);
+        seg.textContent = slide.id;
+        seg.title = slide.id + ' — ' + slide.title;
+        seg.onclick = () => {
+            audio.currentTime = s.start;
+            isAutoSync = true;
+            syncSlideToTime(s.start);
+        };
+        map.appendChild(seg);
+        prevEnd = s.end;
+    });
+}
+
+function updateAudioMap(currentIdx) {
+    document.querySelectorAll('.map-segment').forEach(seg => {
+        seg.classList.toggle('active', parseInt(seg.dataset.idx) === currentIdx);
+    });
+}
+
+function showSlide(index) {
+    if (index < 0 || index >= SLIDES.length) return;
+    currentSlide = index;
+    const slide = SLIDES[index];
+    document.getElementById('slide-id').textContent = slide.id;
+    document.getElementById('slide-title').textContent = slide.title;
+    const contentEl = document.getElementById('slide-content');
+    contentEl.style.animation = 'none';
+    contentEl.offsetHeight; // 리플로우 트리거
+    contentEl.style.animation = '';
+    contentEl.innerHTML = slide.content;
+    const badge = document.getElementById('slide-badge');
+    if (slide.hasAudio) {
+        badge.textContent = '';
+        badge.className = '';
+        badge.style.display = 'none';
+    } else {
+        badge.textContent = '교안 전용';
+        badge.className = 'badge-no-audio';
+        badge.style.display = '';
+    }
+    // 네비게이션 도트 활성화
+    document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+    });
+    // 인덱스 패널 활성화
+    document.querySelectorAll('.index-item').forEach((item, i) => {
+        item.classList.toggle('active', i === index);
+        if (i === index) item.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+    });
+    // 오디오 맵 활성화
+    updateAudioMap(index);
+
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// 시간 기반 슬라이드 동기화 (정렬된 audioSlides 사용)
+function syncSlideToTime(t) {
+    let targetIdx = -1;
+    for (let i = audioSlides.length - 1; i >= 0; i--) {
+        if (t >= audioSlides[i].start) {
+            targetIdx = audioSlides[i].idx;
+            break;
+        }
+    }
+    if (targetIdx >= 0 && targetIdx !== currentSlide) {
+        showSlide(targetIdx);
+    }
+}
+
+function onTimeUpdate() {
+    const t = audio.currentTime;
+    seekBar.value = t;
+    updateTimeDisplay();
+    updateSubtitle(t);
+    if (!isAutoSync) return;
+    syncSlideToTime(t);
+}
+
+function updateTimeDisplay() {
+    const cur = formatTime(audio.currentTime);
+    const dur = formatTime(audio.duration || 0);
+    timeDisplay.textContent = cur + ' / ' + dur;
+}
+
+function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function togglePlay() {
+    if (audio.paused) {
+        audio.play();
+        playBtn.innerHTML = ICON_PAUSE;
+        isAutoSync = true;
+    } else {
+        audio.pause();
+        playBtn.innerHTML = ICON_PLAY;
+    }
+}
+
+function changeSpeed(val) {
+    audio.playbackRate = parseFloat(val);
+}
+
+function skipTime(sec) {
+    audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + sec));
+}
+
+const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    if (e.code === 'ArrowLeft') { showSlide(currentSlide - 1); isAutoSync = false; }
+    if (e.code === 'ArrowRight') { showSlide(currentSlide + 1); isAutoSync = false; }
+    if (e.key === '-' || e.key === '_') {
+        const cur = SPEED_STEPS.indexOf(audio.playbackRate);
+        const idx = cur > 0 ? cur - 1 : 0;
+        audio.playbackRate = SPEED_STEPS[idx];
+        document.getElementById('speed-select').value = SPEED_STEPS[idx];
+    }
+    if (e.key === '=' || e.key === '+') {
+        const cur = SPEED_STEPS.indexOf(audio.playbackRate);
+        const idx = cur < SPEED_STEPS.length - 1 ? (cur === -1 ? 2 : cur + 1) : SPEED_STEPS.length - 1;
+        audio.playbackRate = SPEED_STEPS[idx];
+        document.getElementById('speed-select').value = SPEED_STEPS[idx];
+    }
+});
+
+function updateSubtitle(t) {
+    if (typeof TRANSCRIPT === 'undefined' || TRANSCRIPT.length === 0) return;
+    const idx = findTranscriptIdx(t);
+    if (idx === lastSubIdx) return;
+    lastSubIdx = idx;
+    const el = document.getElementById('subtitle-text');
+    if (el) el.textContent = idx >= 0 ? TRANSCRIPT[idx].text : '';
+}
+
+function findTranscriptIdx(t) {
+    let lo = 0, hi = TRANSCRIPT.length - 1, result = -1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (TRANSCRIPT[mid].start <= t) { result = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+    }
+    if (result >= 0 && t <= TRANSCRIPT[result].end) return result;
+    return -1;
+}
+
+// 모바일 목차 오버레이
+function buildOverlayIndex() {
+    const list = document.getElementById('index-overlay-list');
+    if (!list) return;
+    SLIDES.forEach((slide, i) => {
+        const item = document.createElement('div');
+        item.className = 'index-item' + (slide.hasAudio ? ' has-audio' : '');
+        item.innerHTML = '<span class="idx-id">' + slide.id + '</span><span class="idx-title">' + slide.title + '</span>';
+        item.onclick = () => { isAutoSync = false; showSlide(i); closeOverlay(); };
+        list.appendChild(item);
+    });
+}
+
+function openOverlay() {
+    const ov = document.getElementById('index-overlay');
+    ov.classList.add('open');
+    // 현재 슬라이드 하이라이트
+    const items = document.querySelectorAll('#index-overlay-list .index-item');
+    items.forEach((item, i) => {
+        item.classList.toggle('active', i === currentSlide);
+        if (i === currentSlide) item.scrollIntoView({block: 'center', behavior: 'smooth'});
+    });
+}
+
+function closeOverlay() {
+    document.getElementById('index-overlay').classList.remove('open');
+}
+
+// 가로 스크롤 영역: 마우스 휠 → 가로 스크롤 변환
+document.querySelectorAll('#audio-map, #slide-nav').forEach(el => {
+    el.addEventListener('wheel', (e) => {
+        if (el.scrollWidth <= el.clientWidth) return; // 스크롤 불필요
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+    }, {passive: false});
+});
+
+init();
+buildOverlayIndex();
+initSubtitleControls();
+
+// ========== 플로팅 자막 드래그 + 컨트롤 ==========
+function initSubtitleControls() {
+    const box = document.getElementById('subtitle-box');
+    if (!box) return;
+    const mobileQuery = window.matchMedia('(max-width: 900px)');
+    let isMobile = mobileQuery.matches;
+    mobileQuery.addEventListener('change', (e) => { isMobile = e.matches; });
+
+    // localStorage에서 설정 복원
+    const saved = JSON.parse(localStorage.getItem('sc-sub-settings') || '{}');
+    let fontSize = saved.fontSize || 16;
+    let posMode = saved.posMode || 'bottom'; // bottom, top, overlay, hidden, free
+    let freeX = saved.freeX;
+    let freeY = saved.freeY;
+    let freeW = saved.freeW;
+
+    const subText = document.getElementById('subtitle-text');
+    subText.style.fontSize = fontSize + 'px';
+
+    // 위치 모드 적용
+    function applyPos(mode) {
+        posMode = mode;
+        box.classList.remove('free', 'hidden');
+        if (mode === 'hidden') {
+            box.classList.add('hidden');
+        } else if (mode === 'free') {
+            box.classList.add('free');
+            box.style.left = (freeX || 100) + 'px';
+            box.style.top = (freeY || (window.innerHeight - 100)) + 'px';
+            box.style.bottom = 'auto';
+            box.style.transform = 'none';
+            if (freeW) box.style.width = freeW + 'px';
+        } else {
+            // bottom (기본)
+            box.style.left = '50%'; box.style.top = '';
+            box.style.bottom = (window.innerWidth <= 900 ? '56px' : '20px'); box.style.transform = 'translateX(-50%)';
+            box.style.width = '';
+        }
+        saveSettings();
+        document.getElementById('sub-hide-btn').classList.toggle('active', mode !== 'hidden');
+    }
+
+    function saveSettings() {
+        const r = box.getBoundingClientRect();
+        localStorage.setItem('sc-sub-settings', JSON.stringify({
+            fontSize, posMode, ccMode,
+            freeX: posMode === 'free' ? r.left : freeX,
+            freeY: posMode === 'free' ? r.top : freeY,
+            freeW: posMode === 'free' ? r.width : freeW,
+        }));
+    }
+
+    // 위치 전환 버튼: bottom↔free
+    const posIcon = document.getElementById('sub-pos-icon');
+    function updatePosIcon() {
+        const svgMove = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M5 5l-3 3 3 3M19 5l3 3-3 3M5 19l-3-3 3-3M19 19l3-3-3-3"/></svg>';
+        const svgVert = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 5l7-3 7 3M5 19l7 3 7-3"/></svg>';
+        const svgDock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M3 3h18v7H3z" opacity="0.3"/></svg>';
+        if (isMobile) { posIcon.innerHTML = posMode === 'free' ? svgVert : svgDock; }
+        else { posIcon.innerHTML = posMode === 'free' ? svgDock : svgMove; }
+    }
+    document.getElementById('sub-pos-btn').onclick = () => {
+        if (posMode === 'hidden') { applyPos('bottom'); }
+        else { applyPos(posMode === 'bottom' ? 'free' : 'bottom'); }
+        updatePosIcon();
+    };
+    mobileQuery.addEventListener('change', updatePosIcon);
+
+    // 폰트 크기
+    document.getElementById('sub-size-up').onclick = () => {
+        fontSize = Math.min(28, fontSize + 2);
+        subText.style.fontSize = fontSize + 'px';
+        saveSettings();
+    };
+    document.getElementById('sub-size-dn').onclick = () => {
+        fontSize = Math.max(10, fontSize - 2);
+        subText.style.fontSize = fontSize + 'px';
+        saveSettings();
+    };
+
+    // CC 모드: default → text-only → hidden
+    let ccMode = saved.ccMode || 'default';
+    const ccModes = ['default', 'text-only', 'hidden'];
+
+    function applyCcMode(mode) {
+        ccMode = mode;
+        box.classList.remove('hidden', 'text-only');
+        if (mode === 'hidden') {
+            box.classList.add('hidden');
+        } else if (mode === 'text-only') {
+            box.classList.add('text-only');
+        }
+        const btn = document.getElementById('sub-hide-btn');
+        btn.style.opacity = mode === 'hidden' ? '0.4' : mode === 'text-only' ? '0.7' : '1';
+        btn.classList.toggle('active', mode === 'default');
+        saveSettings();
+    }
+
+    document.getElementById('sub-hide-btn').onclick = () => {
+        const idx = ccModes.indexOf(ccMode);
+        applyCcMode(ccModes[(idx + 1) % ccModes.length]);
+    };
+    applyCcMode(ccMode);
+
+    // PC 드래그 (free 모드)
+    let dragStartX, dragStartY, boxStartX, boxStartY, isDragging = false;
+
+    // 마우스 드래그 (PC: 자유 이동, 모바일 규격: 수직만)
+    box.addEventListener('mousedown', (e) => {
+        if (posMode !== 'free' || e.target.tagName === 'BUTTON') return;
+        isDragging = true;
+        box.classList.add('dragging');
+        dragStartX = e.clientX; dragStartY = e.clientY;
+        const r = box.getBoundingClientRect();
+        boxStartX = r.left; boxStartY = r.top;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dy = e.clientY - dragStartY;
+        box.style.top = (boxStartY + dy) + 'px';
+        box.style.bottom = 'auto';
+        if (!isMobile) {
+            const dx = e.clientX - dragStartX;
+            box.style.left = (boxStartX + dx) + 'px';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        box.classList.remove('dragging');
+        freeX = parseInt(box.style.left);
+        freeY = parseInt(box.style.top);
+        saveSettings();
+    });
+
+    // 모바일 터치 드래그 (free 모드 — 수직 이동만)
+    box.addEventListener('touchstart', (e) => {
+        if (posMode !== 'free') return;
+        isDragging = true;
+        box.classList.add('dragging');
+        const touch = e.touches[0];
+        dragStartY = touch.clientY;
+        const r = box.getBoundingClientRect();
+        boxStartY = r.top;
+    }, {passive: true});
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const newY = boxStartY + touch.clientY - dragStartY;
+        box.style.top = newY + 'px';
+        box.style.bottom = 'auto';
+        box.style.left = '50%';
+        box.style.transform = 'translateX(-50%)';
+    }, {passive: true});
+
+    document.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        box.classList.remove('dragging');
+        freeY = parseInt(box.style.top);
+        saveSettings();
+    });
+
+    // 초기 적용
+    applyPos(posMode);
+    updatePosIcon();
+}
+
+</script>
+</body>
+</html>
