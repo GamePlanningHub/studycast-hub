@@ -281,9 +281,7 @@ footer a:hover { opacity: 1; }
 </footer>
 
 <script>
-const REPO = 'GamePlanningHub/studycast-hub';
-const API  = `https://api.github.com/repos/${REPO}/contents?ref=master`;
-const PAGES_BASE = '';  // 같은 도메인 내 상대경로
+const MANIFEST = 'manifest.json';  // 같은 도메인 내 상대경로
 
 async function load() {
     const status  = document.getElementById('status');
@@ -293,59 +291,30 @@ async function load() {
     const empty   = document.getElementById('empty');
 
     try {
-        const res = await fetch(API);
+        const res = await fetch(MANIFEST);
+        if (!res.ok) throw new Error(`manifest.json 로드 실패: ${res.status}`);
 
-        // API 속도 제한 처리
-        if (res.status === 403) {
-            const remaining = res.headers.get('x-ratelimit-remaining');
-            if (remaining === '0') {
-                throw new Error('GitHub API 속도 제한에 도달했습니다. 잠시 후 새로고침해주세요.');
-            }
-        }
-        if (!res.ok) throw new Error(`GitHub API 오류: ${res.status}`);
-
-        const contents = await res.json();
-
-        // 폴더만 필터 (파일, .으로 시작하는 숨김폴더 제외)
-        const folders = contents
-            .filter(item => item.type === 'dir' && !item.name.startsWith('.'))
-            .sort((a, b) => a.name.localeCompare(b.name));
+        const entries = await res.json();
 
         status.style.display = 'none';
 
-        if (folders.length === 0) {
+        if (entries.length === 0) {
             empty.style.display = 'block';
             counter.textContent = '강의 0개';
             return;
         }
 
-        counter.textContent = `강의 ${folders.length}개`;
+        counter.textContent = `강의 ${entries.length}개`;
 
-        // 각 폴더의 index.html에서 <title> 추출
-        const cards = await Promise.all(folders.map(async (folder, i) => {
-            const url = `${PAGES_BASE}/${folder.name}/`;
-            let title = folder.name.replace(/-/g, ' ');
-            try {
-                const htmlUrl = `https://raw.githubusercontent.com/${REPO}/master/${folder.name}/index.html`;
-                const r = await fetch(htmlUrl);
-                if (r.ok) {
-                    const text = await r.text();
-                    const m = text.match(/<title>([^<]+)<\/title>/);
-                    if (m) title = m[1];
-                }
-            } catch(e) { /* 폴더명 그대로 사용 */ }
-            return { name: folder.name, title, url, index: i };
-        }));
-
-        cards.forEach(({ name, title, url, index }) => {
+        entries.forEach((entry, i) => {
             const card = document.createElement('a');
             card.className = 'card';
-            card.href = url;
+            card.href = `/${entry.folder}/`;
             card.innerHTML = `
-                <div class="card-index">SC · ${String(index+1).padStart(2,'0')}</div>
-                <div class="card-title">${escHtml(title)}</div>
+                <div class="card-index">SC · ${String(i+1).padStart(2,'0')}</div>
+                <div class="card-title">${escHtml(entry.title)}</div>
                 <div class="card-meta">
-                    <span class="card-repo">${escHtml(name)}</span>
+                    <span class="card-repo">${escHtml(entry.folder)}</span>
                 </div>
                 <span class="card-arrow">→</span>
             `;
