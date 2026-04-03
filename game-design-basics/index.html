@@ -1125,7 +1125,7 @@ function buildAudioMap() {
         seg.className = 'map-segment';
         seg.dataset.idx = s.idx;
         seg.style.flexGrow = duration.toFixed(1);
-        seg.textContent = slide.id;
+        seg.textContent = slide.id.replace('P', '');
         seg.title = slide.id + ' — ' + slide.title;
         seg.onclick = () => {
             audio.currentTime = s.start;
