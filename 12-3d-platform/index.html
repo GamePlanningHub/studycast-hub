@@ -658,18 +658,44 @@ body {
     #slide-container { padding-bottom: 140px !important; }
 }
 
-/* ========== 모바일 목차 FAB + 오버레이 ========== */
-#index-fab {
+/* ========== 모바일 네비게이션 FAB 그룹 ========== */
+#mobile-fab-group {
     display: none;
     position: fixed;
     bottom: 20px; right: 18px;
     z-index: 1100;
-    width: 44px; height: 44px;
+    gap: 8px;
+    align-items: center;
+}
+@media (max-width: 900px) {
+    #mobile-fab-group { display: flex; bottom: 14px; }
+}
+.nav-fab {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(124,92,62,0.15);
+    transition: var(--transition);
+    display: flex; align-items: center; justify-content: center;
+}
+.nav-fab:hover {
+    background: var(--border-dim);
+    color: var(--text-primary);
+}
+.nav-fab:active { transform: scale(0.93); }
+#index-fab {
+    display: none;
+    position: relative;
+    width: 38px; height: 38px;
     border-radius: 50%;
     border: none;
     background: var(--accent);
     color: #fff;
-    font-size: 18px;
+    font-size: 16px;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(124,92,62,0.2);
     transition: var(--transition);
@@ -681,7 +707,7 @@ body {
     box-shadow: 0 4px 12px rgba(124,92,62,0.2);
 }
 @media (max-width: 900px) {
-    #index-fab { display: flex; bottom: 14px; }
+    #index-fab { display: flex; }
 }
 
 #index-overlay {
@@ -777,7 +803,11 @@ body {
     </div>
   </div>
 </div>
-<button id="index-fab" onclick="openOverlay()" title="목차">☰</button>
+<div id="mobile-fab-group">
+  <button class="nav-fab" id="nav-prev" onclick="showSlide(currentSlide-1);isAutoSync=false" title="이전"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <button class="nav-fab" id="nav-next" onclick="showSlide(currentSlide+1);isAutoSync=false" title="다음"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+  <button id="index-fab" onclick="openOverlay()" title="목차"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+</div>
 <div id="index-overlay" onclick="if(event.target===this)closeOverlay()">
   <div id="index-overlay-panel">
     <div id="index-overlay-header">
