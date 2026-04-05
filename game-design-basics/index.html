@@ -46,7 +46,7 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { scroll-behavior: smooth; overflow-x: hidden; }
+html { scroll-behavior: smooth; }
 
 body {
     font-family: 'Noto Sans KR', -apple-system, sans-serif;
@@ -57,9 +57,13 @@ body {
     overflow-x: hidden;
 }
 
+/* ========== 플레이어 헤더 (sticky 래퍼) ========== */
+#player-header {
+    position: sticky; top: 0; z-index: 100;
+}
+
 /* ========== 오디오 바 ========== */
 #audio-bar {
-    position: sticky; top: 0; z-index: 100;
     background: var(--bg-glass);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -174,6 +178,11 @@ body {
     transition: var(--transition);
 }
 #speed-select:hover { border-color: var(--accent); }
+
+/* 재생 버튼 그룹 */
+.playback-group {
+    display: flex; align-items: center; gap: 12px;
+}
 
 /* ========== 슬라이드 네비게이션 ========== */
 #slide-nav {
@@ -547,9 +556,11 @@ body {
     #time-display { min-width: auto; font-size: 10px; }
     #speed-select { padding: 4px 6px; font-size: 10px; }
     #seek-bar { order: 10; flex: unset; width: 100%; height: 4px; margin-top: 2px; }
+    /* 재생 버튼 그룹 — 오른쪽 정렬 (오른손 조작 최적화) */
+    .playback-group { margin-left: auto; gap: 6px; }
 
-    /* 네비게이션 도트 */
-    #slide-nav { padding: 8px 12px; gap: 2px; }
+    /* 네비게이션 도트 — sticky 헤더 내 배경 보장 */
+    #slide-nav { padding: 8px 12px; gap: 2px; background: var(--bg-surface); }
     .nav-dot { width: 28px; height: 26px; font-size: 9px; }
 
     /* 슬라이드 영역 */
@@ -783,13 +794,11 @@ body {
 </head>
 <body>
 <div id="app">
+  <div id="player-header">
   <div id="audio-bar">
     <audio id="audio" src="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev/game-design-basics/%EC%B9%98%EB%B0%80%ED%95%98%EA%B2%8C_%EA%B3%84%EC%82%B0%EB%90%9C_%EA%B2%8C%EC%9E%84_%EC%86%8D_%EA%B0%90%EC%A0%95_%EC%84%A4%EA%B3%84%EB%8F%84.m4a" preload="auto"></audio>
     <div id="audio-controls">
       <a href="/" class="hub-btn" title="목록으로"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
-      <button class="skip-btn" onclick="skipTime(-10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="2.5" height="12" rx="1" fill="currentColor"/><path d="M13 1.5L5 7L13 12.5V1.5Z" fill="currentColor"/></svg></button>
-      <button id="play-btn" onclick="togglePlay()"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg></button>
-      <button class="skip-btn" onclick="skipTime(10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1.5L9 7L1 12.5V1.5Z" fill="currentColor"/><rect x="10.5" y="1" width="2.5" height="12" rx="1" fill="currentColor"/></svg></button>
       <span id="time-display">0:00 / 0:00</span>
       <input type="range" id="seek-bar" min="0" max="86400" value="0" step="0.1">
       <select id="speed-select" onchange="changeSpeed(this.value)">
@@ -801,10 +810,16 @@ body {
         <option value="1.75">1.75x</option>
         <option value="2">2.0x</option>
       </select>
+      <div class="playback-group">
+        <button class="skip-btn" onclick="skipTime(-10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="2.5" height="12" rx="1" fill="currentColor"/><path d="M13 1.5L5 7L13 12.5V1.5Z" fill="currentColor"/></svg></button>
+        <button id="play-btn" onclick="togglePlay()"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg></button>
+        <button class="skip-btn" onclick="skipTime(10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1.5L9 7L1 12.5V1.5Z" fill="currentColor"/><rect x="10.5" y="1" width="2.5" height="12" rx="1" fill="currentColor"/></svg></button>
+      </div>
     </div>
     <div id="audio-map"></div>
   </div>
   <div id="slide-nav"></div>
+  </div>
   <div id="main-layout">
     <div id="slide-area">
       <div id="slide-container">
