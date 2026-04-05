@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev" crossorigin>
 <title>3. 게임 디자인 / 컨셉 기획 ⭐⭐⭐</title>
 <style>
@@ -17,12 +19,13 @@
     --bg-glass: rgba(250, 249, 247, 0.92);
     --border-subtle: rgba(0,0,0,0.06);
     --border-dim: #E5E2DC;
-    --border-accent: rgba(124,92,62,0.25);
+    --accent-rgb: 124,92,62;
+    --border-accent: rgba(var(--accent-rgb),0.25);
     --text-primary: #1C1917;
     --text-secondary: #57534E;
     --text-muted: #A8A29E;
     --accent: #7C5C3E;
-    --accent-glow: rgba(124,92,62,0.12);
+    --accent-glow: rgba(var(--accent-rgb),0.12);
     --accent-bright: #63492F;
     --gold: #B45309;
     --gold-dim: rgba(180,83,9,0.08);
@@ -33,6 +36,12 @@
     --radius: 12px;
     --radius-sm: 8px;
     --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Noto Sans KR', sans-serif;
+    --bp-mobile: 900px;
+    --z-subtitle: 1000;
+    --z-fab: 1100;
+    --z-overlay: 1200;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,7 +77,7 @@ body {
     width: 38px; height: 38px; border-radius: 50%;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 8px rgba(124,92,62,0.2);
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.2);
     transition: var(--transition);
     flex-shrink: 0;
 }
@@ -76,9 +85,18 @@ body {
 #play-btn:hover {
     background: var(--accent-bright);
     transform: scale(1.06);
-    box-shadow: 0 4px 12px rgba(124,92,62,0.2);
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb),0.2);
 }
-
+#play-btn.loading { position: relative; }
+#play-btn.loading::after {
+    content: ''; position: absolute; inset: -3px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--accent-bright);
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#time-display.loading { opacity: 0.5; }
 .hub-btn {
     background: transparent;
     border: 1px solid var(--border-dim);
@@ -115,7 +133,7 @@ body {
 }
 #time-display {
     color: var(--text-muted); font-size: 12px;
-    min-width: 90px; font-family: 'JetBrains Mono', monospace;
+    min-width: 90px; font-family: var(--font-mono);
     letter-spacing: 0.5px;
 }
 
@@ -133,7 +151,7 @@ body {
     width: 14px; height: 14px;
     border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 1px 4px rgba(124,92,62,0.2);
+    box-shadow: 0 1px 4px rgba(var(--accent-rgb),0.2);
     cursor: pointer;
     transition: var(--transition);
 }
@@ -151,7 +169,7 @@ body {
     background: var(--bg-elevated); color: var(--text-secondary);
     border: 1px solid var(--border-dim);
     border-radius: 6px; padding: 5px 10px;
-    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-family: var(--font-mono);
     cursor: pointer; outline: none;
     transition: var(--transition);
 }
@@ -172,15 +190,15 @@ body {
     width: 34px; height: 28px; border-radius: 7px;
     border: 1px solid transparent; cursor: pointer;
     font-size: 11px; font-weight: 500;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     display: flex; align-items: center; justify-content: center;
     transition: var(--transition);
     position: relative;
     flex-shrink: 0;
 }
 .nav-dot.has-audio {
-    background: rgba(124,92,62,0.07); color: var(--accent);
-    border-color: rgba(124,92,62,0.15);
+    background: rgba(var(--accent-rgb),0.07); color: var(--accent);
+    border-color: rgba(var(--accent-rgb),0.15);
 }
 .nav-dot.no-audio {
     background: transparent; color: var(--text-muted);
@@ -189,12 +207,12 @@ body {
 .nav-dot:hover {
     opacity: 1;
     border-color: var(--accent);
-    background: rgba(124,92,62,0.08);
+    background: rgba(var(--accent-rgb),0.08);
 }
 .nav-dot.active {
     background: var(--accent); color: #fff;
     opacity: 1;
-    box-shadow: 0 2px 8px rgba(124,92,62,0.18);
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.18);
     border-color: transparent;
 }
 
@@ -213,7 +231,7 @@ body {
 #slide-id {
     color: var(--accent); font-size: 11px; letter-spacing: 2px;
     font-weight: 500; text-transform: uppercase;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
 }
 #slide-badge {
     font-size: 10px; padding: 3px 10px; border-radius: 20px;
@@ -221,7 +239,7 @@ body {
 }
 .badge-no-audio {
     background: var(--gold-dim); color: var(--accent);
-    border: 1px solid rgba(124,92,62,0.2);
+    border: 1px solid rgba(var(--accent-rgb),0.2);
     font-weight: 600;
 }
 
@@ -278,7 +296,7 @@ body {
     transition: var(--transition);
 }
 .slide-points li:hover {
-    border-color: rgba(124,92,62,0.16);
+    border-color: rgba(var(--accent-rgb),0.16);
     background: #FDF9F6;
 }
 .slide-points li::before {
@@ -297,7 +315,7 @@ body {
 .slide-note {
     display: flex; gap: 12px; align-items: flex-start;
     background: #FDF9F6;
-    border: 1px solid rgba(124,92,62,0.15);
+    border: 1px solid rgba(var(--accent-rgb),0.15);
     border-radius: var(--radius);
     padding: 16px 18px; margin-top: 24px;
     position: relative; overflow: hidden;
@@ -336,7 +354,7 @@ body {
     transition: var(--transition);
 }
 .slide-def-card:hover {
-    border-color: rgba(124,92,62,0.18);
+    border-color: rgba(var(--accent-rgb),0.18);
     border-left-color: var(--accent-bright);
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
@@ -360,7 +378,7 @@ body {
     transition: var(--transition);
 }
 .slide-card:hover {
-    border-color: rgba(124,92,62,0.16);
+    border-color: rgba(var(--accent-rgb),0.16);
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 .card-heading {
@@ -400,7 +418,7 @@ body {
     flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     font-size: 9px; font-weight: 500;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     color: rgba(255,255,255,0.85);
     cursor: pointer;
     transition: filter 0.15s;
@@ -416,10 +434,10 @@ body {
     filter: brightness(1.15);
     color: #FDF9F6;
     font-weight: 500;
-    box-shadow: inset 0 0 0 1.5px rgba(124,92,62,0.6);
+    box-shadow: inset 0 0 0 1.5px rgba(var(--accent-rgb),0.6);
 }
 /* 구간별 색상 */
-.map-segment:nth-of-type(odd)  { background: rgba(124,92,62,0.5); }
+.map-segment:nth-of-type(odd)  { background: rgba(var(--accent-rgb),0.5); }
 .map-segment:nth-of-type(even) { background: rgba(99,73,47,0.38); }
 .map-gap {
     height: 100%;
@@ -463,7 +481,7 @@ body {
     font-weight: 700;
     color: var(--accent);
     letter-spacing: 0.04em;
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: var(--font-sans);
     border-bottom: 1px solid var(--border-dim);
 }
 
@@ -480,7 +498,7 @@ body {
 }
 .index-item:hover {
     background: var(--bg-elevated);
-    border-left-color: rgba(124,92,62,0.18);
+    border-left-color: rgba(var(--accent-rgb),0.18);
 }
 .index-item.active {
     background: var(--bg-elevated);
@@ -488,7 +506,7 @@ body {
 }
 .index-item .idx-id {
     color: var(--accent);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 600;
     flex-shrink: 0;
@@ -520,7 +538,7 @@ body {
     #audio-map { margin-top: 12px; }
 }
 @media (max-width: 640px) {
-    /* 오디오 바 */
+    /* 오디오 바 — 2행 레이아웃 */
     #audio-bar { padding: 10px 12px; }
     #audio-map { margin-top: 16px; }
     #audio-controls { gap: 6px; flex-wrap: wrap; }
@@ -559,7 +577,7 @@ body {
     position: fixed;
     bottom: 20px; left: 50%;
     transform: translateX(-50%);
-    z-index: 1000;
+    z-index: var(--z-subtitle);
     background: rgba(28,25,23,0.85);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -619,7 +637,7 @@ body {
 #sub-controls {
     position: fixed;
     bottom: 20px; left: 20px;
-    z-index: 1001;
+    z-index: calc(var(--z-subtitle) + 1);
     display: flex;
     gap: 3px;
     flex-direction: row;
@@ -664,7 +682,7 @@ body {
     display: none;
     position: fixed;
     bottom: 20px; right: 18px;
-    z-index: 1100;
+    z-index: var(--z-fab);
     gap: 8px;
     align-items: center;
 }
@@ -679,7 +697,7 @@ body {
     color: var(--text-secondary);
     font-size: 14px;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(124,92,62,0.15);
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.15);
     transition: var(--transition);
     display: flex; align-items: center; justify-content: center;
 }
@@ -698,14 +716,14 @@ body {
     color: #fff;
     font-size: 16px;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(124,92,62,0.2);
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.2);
     transition: var(--transition);
     align-items: center; justify-content: center;
 }
 #index-fab:hover {
     background: var(--accent-bright);
     transform: scale(1.06);
-    box-shadow: 0 4px 12px rgba(124,92,62,0.2);
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb),0.2);
 }
 @media (max-width: 900px) {
     #index-fab { display: flex; }
@@ -714,7 +732,7 @@ body {
 #index-overlay {
     display: none;
     position: fixed; inset: 0;
-    z-index: 1200;
+    z-index: var(--z-overlay);
     background: rgba(28,25,23,0.35);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -745,7 +763,7 @@ body {
     color: var(--text-muted);
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-mono);
 }
 #index-overlay-close {
     background: transparent; border: none;
@@ -1240,15 +1258,27 @@ const SLIDES = [
 ];
 const TRANSCRIPT = [{"start": 0.0, "end": 4.32, "text": "여러분 그 완벽하고 아름다운 건축 도면 보신 적 있으시죠?"}, {"start": 4.32, "end": 7.72, "text": "종이 위에서는 모든 선이 기가 막히게 딱딱 맞아 떨어집니다"}, {"start": 7.72, "end": 10.0, "text": "네 보면 진짜 예술이 따로 없죠"}, {"start": 10.0, "end": 13.48, "text": "그쵸, 야 이대로 지으면 진짜 대박이겠다 싶잖아요"}, {"start": 13.48, "end": 18.44, "text": "근데 막상 그 도면대로 시멘트를 붓고 건물을 쫙 올렸더니"}, {"start": 18.44, "end": 20.96, "text": "방문이 벽에 걸려서 안 열리는 거예요"}, {"start": 20.96, "end": 24.36, "text": "아이고 2층으로 가는 계단이 허공에서 뚝 끊겨 있고"}, {"start": 24.36, "end": 25.96, "text": "그러면 정말 끔찍하네요"}, {"start": 25.96, "end": 28.12, "text": "상상만 해도 진짜 아찔한데"}, {"start": 28.12, "end": 31.32, "text": "현실의 건축에서는 뭐 상상하기 힘든 일이지만요"}, {"start": 31.32, "end": 35.64, "text": "놀랍게도 여러분이 즐겨 하시는 수많은 게임의 개발 과정에서는"}, {"start": 35.64, "end": 38.44, "text": "이런 대참사가 아주 빈번하게 일어난다고 합니다"}, {"start": 38.44, "end": 40.92, "text": "맞습니다 기초 설계가 부실하면"}, {"start": 40.92, "end": 44.2, "text": "나중에 아무리 화려한 그래픽으로 페인트 칠을 하고"}, {"start": 44.2, "end": 46.92, "text": "유명한 성우를 써서 장식을 막 덧붙여도"}, {"start": 46.92, "end": 49.0, "text": "결국 게임 자체가 무너지고 마니까요"}, {"start": 49.0, "end": 50.64, "text": "바로 그 지점입니다"}, {"start": 50.64, "end": 52.52, "text": "항상 새로운 배움을 갈구하며"}, {"start": 52.52, "end": 55.6, "text": "오늘의 깊이 있는 탐구에 동참해주신 청취자 여러분"}, {"start": 55.6, "end": 57.2, "text": "진심으로 환영합니다"}, {"start": 57.24, "end": 59.96, "text": "오늘 우리가 파헤칠 자료가 정말 흥미로워요"}, {"start": 59.96, "end": 65.36, "text": "막연한 상상력이 어떻게 치밀하고 단단한 게임이라는 건축물로 완성되는지"}, {"start": 65.36, "end": 67.68, "text": "보여주는 아주 중요한 문건이거든요"}, {"start": 67.68, "end": 72.2, "text": "네 바로 게임 기획을 처음 배우는 학생들을 위한 기초 강의 자료죠"}, {"start": 72.2, "end": 75.92, "text": "맞아요 그리고 오늘 저희 미션이 아주 명확하거든요"}, {"start": 75.92, "end": 79.52000000000001, "text": "이 자료는 게임 기획을 처음 배우는 학생을 위한 강의입니다"}, {"start": 79.52000000000001, "end": 82.2, "text": "그래서 저희 커버리즈 원칙이 하나 있어요"}, {"start": 82.2, "end": 86.0, "text": "강의 자료의 모든 개념 그러니까 P(페이지)로 마킹된 페이지와"}, {"start": 86.0, "end": 89.88, "text": "그 안에 항목을 정말 단 하나도 빠짐없이 다뤄야 한다는 겁니다"}, {"start": 89.88, "end": 92.96, "text": "와 1페이지부터 52페이지까지 전부 다요?"}, {"start": 92.96, "end": 95.32, "text": "네 전부 다 해부해보는 겁니다"}, {"start": 95.32, "end": 98.16, "text": "단순히 이런 게 있다 하고 넘어가는 게 아니고요"}, {"start": 98.16, "end": 102.52, "text": "이 기획의 뼈대들이 청취자 여러분이 게임을 할 때 느끼는 그 찌릿한 재미와"}, {"start": 102.52, "end": 105.96000000000001, "text": "어떻게 연결되는지 저희가 친근하게 안내해드리겠습니다"}, {"start": 105.96000000000001, "end": 107.2, "text": "좋습니다"}, {"start": 107.2, "end": 112.0, "text": "저는 이 기획의 각 단계들이 실제 게임의 성공이나 유저 경험에 대체"}, {"start": 112.0, "end": 114.56, "text": "왜 그렇게 결정적인 영향을 미치는지"}, {"start": 114.56, "end": 117.84, "text": "그 인과 관계를 아주 날카롭게 짚어드리겠습니다"}, {"start": 117.84, "end": 120.4, "text": "자 그럼 1페이지부터 시작해보죠"}, {"start": 120.4, "end": 124.12, "text": "게임 개발의 가장 첫 단추인 컨셉 기획입니다"}, {"start": 124.12, "end": 126.48, "text": "강의 자료 P1과 P2를 보면"}, {"start": 126.48, "end": 130.84, "text": "컨셉 기획은 전체 콘텐츠의 스케치를 하는 단계라고 정의하고 있어요"}, {"start": 130.84, "end": 134.12, "text": "네 개발 수순으로 보면 먼저 시장조사를 쫙 하고"}, {"start": 134.12, "end": 136.0, "text": "그 다음 컨셉을 딱 결정하고"}, {"start": 136.0, "end": 138.24, "text": "그걸 바탕으로 프로토타입을 만드는 거죠"}, {"start": 138.24, "end": 141.76, "text": "개발자에게는 길을 잃지 않게 해주는 나침반이고"}, {"start": 141.76, "end": 146.6, "text": "유저에게는 이 게임을 살지 말지 결정하게 만드는 첫인상이라는 거네요"}, {"start": 146.6, "end": 148.39999999999998, "text": "근데 제가 좀 궁금한 게"}, {"start": 148.39999999999998, "end": 153.04, "text": "이 컨셉이라는 게 흔히 말하는 기획 의도랑 그냥 똑같은 거 아닌가요?"}, {"start": 153.04, "end": 155.16, "text": "어 아주 날카로운 질문인데요"}, {"start": 155.16, "end": 158.48, "text": "초보 기획자들이 제일 많이 헷갈리는 부분입니다"}, {"start": 158.48, "end": 163.51999999999998, "text": "기획 의도가 우리가 이 게임을 왜 만드는가 하는 목적에 가깝다면요"}, {"start": 163.51999999999998, "end": 166.39999999999998, "text": "컨셉은 그 목적을 투자자나 유저가"}, {"start": 166.39999999999998, "end": 169.64, "text": "한눈에 딱 알아볼 수 있게 시각화하는 과정이거든요"}, {"start": 169.64, "end": 173.48, "text": "P3에서 P4에 나오는 예시를 보면 확 와닿으실 겁니다"}, {"start": 173.48, "end": 177.35999999999999, "text": "아 그 죽은 컨셉이랑 살아있는 컨셉 얘기요?"}, {"start": 177.35999999999999, "end": 180.0, "text": "그 은행 예시가 참 재밌더라고요"}, {"start": 180.0, "end": 181.92, "text": "예를 들어 어떤 금융회사가"}, {"start": 181.92, "end": 186.27999999999997, "text": "우리는 최첨단이고 혁신적이며 신뢰를 바탕으로 성장합니다"}, {"start": 186.27999999999997, "end": 187.95999999999998, "text": "이렇게 기획서를 썼다고 해보죠"}, {"start": 187.95999999999998, "end": 189.39999999999998, "text": "멋진 말은 다 들어갔네요"}, {"start": 189.39999999999998, "end": 191.2, "text": "네 근데 청취자 여러분"}, {"start": 191.2, "end": 194.0, "text": "솔직히 머릿속에 그려지는 게 아무것도 없잖아요"}, {"start": 194.0, "end": 195.83999999999997, "text": "그냥 흔한 광고 멘트 같고요"}, {"start": 195.83999999999997, "end": 199.07999999999998, "text": "자료에서는 이걸 완벽하게 죽은 컨셉이라고 부르더군요"}, {"start": 199.08, "end": 200.16000000000003, "text": "그렇죠"}, {"start": 200.16000000000003, "end": 202.16000000000003, "text": "반면에 살아있는 컨셉의 예시로"}, {"start": 202.16000000000003, "end": 204.52, "text": "일본의 쓰루가 은행 사례가 나옵니다"}, {"start": 204.52, "end": 206.8, "text": "우리는 개인 금융에 특화되어 있고"}, {"start": 206.8, "end": 209.52, "text": "정맥인식이라는 확실한 보안을 쓰며"}, {"start": 209.52, "end": 212.24, "text": "고객의 생활을 관리한다 이렇게 내세우거든요"}, {"start": 212.24, "end": 214.24, "text": "오 아주 구체적이네요"}, {"start": 214.24, "end": 218.64000000000001, "text": "네 수많은 경쟁작 속에서 유저의 선택을 받는 차별화의 핵심"}, {"start": 218.64000000000001, "end": 221.84, "text": "이 바로 이런 구체성 좋은 컨셉에서 나오는 거죠"}, {"start": 221.84, "end": 223.52, "text": "P4페이지의 핵심입니다"}, {"start": 223.52, "end": 226.52, "text": "근데요 저는 P4페이지를 읽으면서"}, {"start": 226.52, "end": 228.84, "text": "약간 반항심이 들었어요"}, {"start": 228.88, "end": 232.4, "text": "훌륭한 컨셉은 거대한 필터 역할을 해야 한다면서"}, {"start": 232.4, "end": 236.4, "text": "모든 걸 한 문장이나 아주 좁은 틀로 묶어버리라고 하잖아요"}, {"start": 236.4, "end": 238.44, "text": "네 필터링이 중요하다고 하죠"}, {"start": 238.44, "end": 242.64000000000001, "text": "개발 초기부터 이렇게 스스로를 작은 상자 안에 가둬 버리면"}, {"start": 242.64000000000001, "end": 245.56, "text": "개발자들의 창의성을 너무 제한하는 거 아닐까요?"}, {"start": 245.56, "end": 248.76, "text": "막 이것도 재밌겠고 저것도 재밌겠는데 하면서"}, {"start": 248.76, "end": 250.88, "text": "자유롭게 아이디어를 낼 수도 있잖아요"}, {"start": 250.88, "end": 253.32, "text": "어 충분히 그렇게 생각하실 수 있습니다"}, {"start": 253.32, "end": 257.48, "text": "하지만 실제 개발 현장에서는 그 자유로움이 오히려 끔찍한 독이 됩니다"}, {"start": 257.48, "end": 262.32, "text": "컨셉이 필터 역할을 해야 하는 3가지 진짜 치명적인 이유가 있어요"}, {"start": 262.32, "end": 263.48, "text": "오 3가지나요?"}, {"start": 263.48, "end": 266.36, "text": "네 첫째는 일관성 유지입니다"}, {"start": 266.36, "end": 269.20000000000005, "text": "공포게임을 만들고 있는데 갑자기 누군가"}, {"start": 269.20000000000005, "end": 273.32, "text": "요즘 유행하는 코믹 댄스 이모티콘을 넣자고 제안했다고 쳐보죠"}, {"start": 273.32, "end": 276.6, "text": "으아 공포게임에요? 분위기 다 깨지겠네요"}, {"start": 276.6, "end": 279.16, "text": "그렇죠 근데 컨셉이라는 필터가 없으면"}, {"start": 279.16, "end": 282.72, "text": "이 아이디어를 쳐낼 명확한 기준이 없는 겁니다"}, {"start": 282.72, "end": 285.88, "text": "둘째는 효율적인 커뮤니케이션이에요"}, {"start": 285.88, "end": 288.71999999999997, "text": "우리 게임은 차갑고 외로운 우주가 배경이다"}, {"start": 288.71999999999997, "end": 292.24, "text": "이렇게 딱 정의하면 그래픽 팀은 푸른색 톤을 쓰고"}, {"start": 292.24, "end": 295.12, "text": "사운드 팀은 적막한 소리를 만들겠죠"}, {"start": 295.12, "end": 298.08, "text": "수백 명의 팀원이 한 방향을 보게 만드는 겁니다"}, {"start": 298.08, "end": 300.68, "text": "아 마지막 셋째는 마케팅 효율이겠네요"}, {"start": 300.68, "end": 301.76, "text": "맞습니다"}, {"start": 301.76, "end": 304.56, "text": "유저에게 단 한 문장으로 매력을 꽂아 넣어야"}, {"start": 304.56, "end": 307.15999999999997, "text": "마케팅 비용과 시간을 아낄 수 있으니까요"}, {"start": 307.15999999999997, "end": 311.28, "text": "듣고 보니 팀의 방향이 산으로 가는 걸 막아주는 튼튼한 방파제네요"}, {"start": 311.28, "end": 315.15999999999997, "text": "그럼 그 마법의 한 문장은 도대체 어떻게 만드냐"}, {"start": 315.16, "end": 319.04, "text": "P6랑 P7에 아주 명확한 공식이 나오더라고요"}, {"start": 319.04, "end": 320.72, "text": "네 컨셉의 3대 요소죠"}, {"start": 320.72, "end": 324.12, "text": "맞아요 유저가 느낄 감정인 경험"}, {"start": 324.12, "end": 326.04, "text": "게임의 배경인 테마"}, {"start": 326.04, "end": 329.24, "text": "그리고 핵심 규칙인 메커니즘입니다"}, {"start": 329.24, "end": 333.24, "text": "이건 결합해서 테마에서 경험과 메커니즘을 더해"}, {"start": 333.24, "end": 335.40000000000003, "text": "장르가 나뉜다는 공식이에요"}, {"start": 335.40000000000003, "end": 337.44000000000005, "text": "구체적인 예를 들어볼까요?"}, {"start": 337.44000000000005, "end": 340.6, "text": "좀비가 창궐한 포스트 아포칼립스 세계관에서"}, {"start": 340.6, "end": 341.88, "text": "이게 테마죠?"}, {"start": 341.88, "end": 344.36, "text": "주변 자원을 수집해 기지를 건설하고"}, {"start": 344.36, "end": 348.04, "text": "끝까지 살아남는 이게 경험과 메커니즘입니다"}, {"start": 348.04, "end": 350.96000000000004, "text": "이걸 합치면 3인칭 생존 액션 게임이라는"}, {"start": 350.96000000000004, "end": 352.8, "text": "장르가 빡 떨어지는 겁니다"}, {"start": 352.8, "end": 357.16, "text": "애매한 형용사 없이 진짜 뼈대가 딱 완성되네요"}, {"start": 357.16, "end": 361.44, "text": "그럼 P8 페이지로 넘어가서 이 뼈대가 세워지면"}, {"start": 361.44, "end": 364.56, "text": "세부 컨텐츠를 기획할 때 일종의 라벨링을"}, {"start": 364.56, "end": 366.0, "text": "할 수 있게 된다고 하네요"}, {"start": 366.0, "end": 369.72, "text": "네 시스템이나 컨텐츠 기획의 시작점이 되는 거죠"}, {"start": 369.72, "end": 372.76, "text": "몬스터를 잡아서 그 껍질로 장비를 만드는"}, {"start": 372.76, "end": 375.28, "text": "몬스터 헌터식 컨텐츠를 넣을지"}, {"start": 375.28, "end": 378.56, "text": "아니면 돈을 쏟아부어 아이템 희소성을 높이는"}, {"start": 378.56, "end": 381.28, "text": "리니지라이크식 하드코어 시스템을 넣을지"}, {"start": 381.28, "end": 383.12, "text": "라벨링을 딱딱 붙이는 거군요"}, {"start": 383.12, "end": 384.12, "text": "맞아요"}, {"start": 384.12, "end": 387.44, "text": "그리고 P9 페이지를 보면 여기서 반드시 결정해야 할"}, {"start": 387.44, "end": 391.15999999999997, "text": "필수 옵션과 미뤄두어도 되는 선택 옵션을 나눕니다"}, {"start": 391.15999999999997, "end": 392.64, "text": "어떻게 나누나요?"}, {"start": 392.64, "end": 397.08, "text": "중심 테마, 파생 컨텐츠, 기획 의도, 핵심 사이클은"}, {"start": 397.08, "end": 400.03999999999996, "text": "무조건 먼저 확정해야 하는 필수 옵션입니다"}, {"start": 400.04, "end": 404.72, "text": "반면에 세세한 재미 포인트나 잔류 유도 방식, 결제 요소는"}, {"start": 404.72, "end": 406.88, "text": "선택 옵션으로 잠시 빼두는 거죠"}, {"start": 406.88, "end": 410.20000000000005, "text": "아하 P10 페이지 내용이 그거군요"}, {"start": 410.20000000000005, "end": 412.6, "text": "필수 옵션이 단단하게 잡혀야"}, {"start": 412.6, "end": 415.76000000000005, "text": "비로소 세계관, 시스템, 스토리"}, {"start": 415.76000000000005, "end": 418.48, "text": "대략적인 개발 스펙이 결정된다는 거네요"}, {"start": 418.48, "end": 420.16, "text": "네 아주 정확합니다"}, {"start": 420.16, "end": 424.92, "text": "근데 여기서 P11 페이지부터 제가 제일 헷갈렸던 게 나옵니다"}, {"start": 424.92, "end": 428.20000000000005, "text": "바로 컨셉과 중심 테마의 차이였어요"}, {"start": 428.24, "end": 430.28, "text": "둘 다 비슷한 말 아닌가 했는데"}, {"start": 430.28, "end": 433.12, "text": "집 짓기 비유를 보고 무릎을 탁 쳤습니다"}, {"start": 433.12, "end": 434.59999999999997, "text": "어떻게 이해하셨나요?"}, {"start": 434.59999999999997, "end": 437.0, "text": "(컨셉이) 그냥 어떤 물리적인 팩트라면요"}, {"start": 437.0, "end": 441.76, "text": "중심 테마는 이 집은 우리 가족의 따뜻한 유대감을 위해 지었다"}, {"start": 441.76, "end": 444.12, "text": "라는 철학이나 감정인 거죠"}, {"start": 444.12, "end": 446.2, "text": "와 완벽한 이해네요"}, {"start": 446.2, "end": 450.4, "text": "P12에서 아주 매력적으로 다루는 부분이 바로 그겁니다"}, {"start": 450.4, "end": 453.76, "text": "같은 좀비 생존 컨셉이라도 중심 테마에 따라"}, {"start": 453.76, "end": 455.68, "text": "전혀 다른 게임이 되거든요"}, {"start": 455.68, "end": 458.96, "text": "만약 테마가 처절한 이기심이라면 어떨까요?"}, {"start": 458.96, "end": 461.2, "text": "그럼 자원은 엄청 안 나오고"}, {"start": 461.2, "end": 464.76, "text": "남의 뒤통수를 쳐야만 내가 살 수 있게 디자인 되겠죠"}, {"start": 464.76, "end": 466.36, "text": "완전 불신의 게임이네요"}, {"start": 466.36, "end": 470.2, "text": "그렇죠 반대로 테마가 절망 속에 인간애라면"}, {"start": 470.2, "end": 472.88, "text": "혼자서는 절대 못 깨는 보스를 두고"}, {"start": 472.88, "end": 476.68, "text": "남을 치려하면 엄청난 보상을 주는 시스템이 될 겁니다"}, {"start": 476.68, "end": 480.96000000000004, "text": "그래서 P13 페이지에서 기획의 일관성과 차별화를 위해"}, {"start": 480.96000000000004, "end": 483.44, "text": "이 둘을 반드시 나누라고 강조하는 겁니다"}, {"start": 483.44, "end": 486.84, "text": "P14에 명작게임 예시들이 나오잖아요"}, {"start": 486.84, "end": 491.36, "text": "모던 워페어는 단순 슈팅이 아니라 전쟁의 딜레마를"}, {"start": 491.36, "end": 494.28, "text": "바이오 해저드는 거대 기업의 탐욕을"}, {"start": 494.28, "end": 497.76, "text": "문명 온라인은 유저의 선택을 테마로 잡았죠"}, {"start": 497.76, "end": 501.28, "text": "네 그리고 P15로 가면 이 중심 테마가"}, {"start": 501.28, "end": 505.08, "text": "아주 사소한 컨텐츠로도 일관되게 파생되어야 한다고 합니다"}, {"start": 505.08, "end": 508.28, "text": "커피가게 테마라면 단골 손님 시스템이 있어야 하고"}, {"start": 508.28, "end": 511.44, "text": "전장의 긴장감이 테마라면 캐릭터가 다쳤을 때"}, {"start": 511.44, "end": 514.16, "text": "화면에 피와 땀이 묻어나는 효과가 들어가야죠"}, {"start": 514.16, "end": 516.16, "text": "이야 진짜 디테일하네요"}, {"start": 516.16, "end": 520.04, "text": "자 이제 P16부터 P30까지 두 번째 섹션"}, {"start": 520.04, "end": 522.0, "text": "게임의 심장박동이라고 할 수 있는"}, {"start": 522.0, "end": 524.88, "text": "핵심 컨텐츠와 기획 의도로 넘어가 보겠습니다"}, {"start": 524.88, "end": 526.48, "text": "네 아주 중요한 파트죠"}, {"start": 526.48, "end": 528.44, "text": "유저를 사로잡는 강력한 무기니까요"}, {"start": 528.44, "end": 532.0, "text": "맞아요 P16과 P17을 보면 중심 테마를"}, {"start": 532.0, "end": 535.56, "text": "유저가 가장 직접적으로 즐길 수 있는 놀거리려고 하더라고요"}, {"start": 535.56, "end": 539.12, "text": "이걸 가장 잘 보여주는 게 P8에 나오는 리니지의 공성전입니다"}, {"start": 539.12, "end": 540.8, "text": "아 공성전 유명하죠"}, {"start": 540.8, "end": 543.76, "text": "성을 차지하는 대규모 전투가 핵심이니까"}, {"start": 543.76, "end": 546.7199999999999, "text": "유저들은 혈맹을 만들어 결속합니다"}, {"start": 546.7199999999999, "end": 551.16, "text": "하드코어 유저가 주도권을 쥐고 세금 때문에 경제가 폭발하죠"}, {"start": 551.16, "end": 555.4799999999999, "text": "하지만 그 이면에는 작업장 같은 부작용도 따라옵니다"}, {"start": 555.4799999999999, "end": 559.7199999999999, "text": "핵심 컨텐츠 하나가 게임의 정체성을 전부 결정 지어버리는 거예요"}, {"start": 559.7199999999999, "end": 563.3199999999999, "text": "P19에 나오는 던파의 벨트 스크롤 액션이나"}, {"start": 563.3199999999999, "end": 565.92, "text": "게임빌 프로야구의 나만의 선수 육성도"}, {"start": 565.92, "end": 568.88, "text": "다 핵심을 통해 주변 시스템이 확장 되는 거네요"}, {"start": 568.92, "end": 572.16, "text": "그렇죠 그런데 여기서 P20 페이지를 보면"}, {"start": 572.16, "end": 575.24, "text": "초보 기획자들의 끔찍한 함정이 나옵니다"}, {"start": 575.24, "end": 577.4, "text": "본질적 재미를 고치지 않고"}, {"start": 577.4, "end": 581.8, "text": "적, 던전, 아이템, 스토리만 무작정 덧붙이려고 한다는 거죠"}, {"start": 581.8, "end": 583.76, "text": "이거 약간 요리에 비유하자면"}, {"start": 583.76, "end": 585.24, "text": "국물이 진짜 맛이 없는데"}, {"start": 585.24, "end": 588.36, "text": "거기다 조미료랑 고명만 잔뜩 얻는 격 아닌가요?"}, {"start": 588.36, "end": 590.6, "text": "아 비유 너무 좋습니다"}, {"start": 590.6, "end": 592.68, "text": "도대체 무슨 의미가 있겠어요 그게?"}, {"start": 592.68, "end": 595.08, "text": "그래서 P21부터 P25까지"}, {"start": 595.08, "end": 598.44, "text": "기획 의도가 명확해야 한다고 강조하는 거군요"}, {"start": 598.44, "end": 601.8800000000001, "text": "목적이 불명확하면 시간 낭비, 의사결정 지연"}, {"start": 601.8800000000001, "end": 604.24, "text": "그리고 기술부채가 발생한다구요"}, {"start": 604.24, "end": 605.96, "text": "잠깐만요 기술부채요?"}, {"start": 605.96, "end": 608.2800000000001, "text": "네 P23에 나오죠"}, {"start": 608.2800000000001, "end": 610.48, "text": "기획이 이랬다 저랬다 바뀌니까"}, {"start": 610.48, "end": 612.36, "text": "프로그래머들이 임시방편으로"}, {"start": 612.36, "end": 615.6400000000001, "text": "지저분한 코드를 덕지덕지 이어 붙이는 겁니다"}, {"start": 615.6400000000001, "end": 616.7600000000001, "text": "나중에 업데이트할 때"}, {"start": 616.7600000000001, "end": 619.12, "text": "게임이 와르르 무너지는 버그가 생기죠"}, {"start": 619.12, "end": 621.8800000000001, "text": "아 그래서 의도를 바탕으로"}, {"start": 621.8800000000001, "end": 626.48, "text": "작업기간, 인력, 데이터량, 그래픽 리소스를 배분해야 하는군요"}, {"start": 626.48, "end": 628.04, "text": "P25에서 말하듯"}, {"start": 628.04, "end": 631.24, "text": "재미나, 잔류, 결제요소는 따로 떼어 놓구요"}, {"start": 631.24, "end": 633.8000000000001, "text": "맞습니다 그렇게 뼈대를 잡았다면"}, {"start": 633.8000000000001, "end": 636.9200000000001, "text": "P26부터는 플레이어의 심장박동인"}, {"start": 636.9200000000001, "end": 638.9200000000001, "text": "핵심 사이클을 설계해야 합니다"}, {"start": 638.9200000000001, "end": 641.12, "text": "유저가 반복하는 루프죠"}, {"start": 641.12, "end": 644.64, "text": "P27을 보면 농장게임은 심고 수확하고"}, {"start": 644.64, "end": 648.28, "text": "롤은 미니언 처치하고 돈 벌어 한타하는 예시가 나와요"}, {"start": 648.28, "end": 650.9200000000001, "text": "네 이 사이클은 초반부터 반복되니까"}, {"start": 650.9200000000001, "end": 653.76, "text": "피로도를 막기 위해 P30에서는"}, {"start": 653.76, "end": 656.72, "text": "컨텐츠를 서서히 배치하라고 조언합니다"}, {"start": 656.72, "end": 658.8, "text": "이걸 더 큰 그림과 연결해 보면"}, {"start": 658.8, "end": 663.72, "text": "좋은 사이클은 본질적 재미, 흐름 유지, 자원 균형이 필수거든요"}, {"start": 663.72, "end": 667.68, "text": "아 타격감을 위해 스톱, 모션 같은 피드백을 주는 것도"}, {"start": 667.68, "end": 669.8, "text": "흐름 유지의 일환이겠네요"}, {"start": 669.8, "end": 674.48, "text": "근데 P30에 나오는 이 자원 균형 파트가 진짜 소름돋더라구요"}, {"start": 674.48, "end": 675.76, "text": "엔진과 데드락"}, {"start": 675.76, "end": 677.12, "text": "기획자들의 악몽이죠"}, {"start": 677.12, "end": 679.04, "text": "엔진은 무한동력인데"}, {"start": 679.04, "end": 682.96, "text": "알을 낳고 그걸 먹으면 무한히 커지는 뱀 비유가 나와요"}, {"start": 682.96, "end": 686.52, "text": "사냥에서 버는 골드가 물량값보다 압도적으로 많아서"}, {"start": 686.52, "end": 688.52, "text": "경제가 박살나는 상황이잖아요"}, {"start": 688.52, "end": 689.52, "text": "맞아요"}, {"start": 689.52, "end": 692.2, "text": "반대로 데드락은 순환 불가 상태입니다"}, {"start": 692.2, "end": 694.9200000000001, "text": "워크래프트3에서 언데드 초보 유저가"}, {"start": 694.9200000000001, "end": 697.36, "text": "실수로 금광 건물을 팔아버린 상황이죠"}, {"start": 697.36, "end": 699.08, "text": "돈을 캐야 건물을 짓는데"}, {"start": 699.08, "end": 702.08, "text": "건물이 없으니 영원히 돈을 못 캐는 거네요"}, {"start": 702.08, "end": 704.0400000000001, "text": "일꾼은 멀뚱멀뚱 서있고"}, {"start": 704.0400000000001, "end": 707.6, "text": "시스템 밸런스가 붕괴되는 이런 위험은 원천 차단해야 합니다"}, {"start": 707.6, "end": 711.2, "text": "와 기획은 거대한 톱니바퀴를 맞추는 거네요"}, {"start": 711.24, "end": 716.4000000000001, "text": "이제 마지막 섹션 p31부터 p52까지 세계관 구축으로 가보겠습니다"}, {"start": 716.4000000000001, "end": 718.72, "text": "메커니즘이 뼈대라면 세계관은 살이죠"}, {"start": 718.72, "end": 721.72, "text": "네 왜 필요한가에 대한 질문부터"}, {"start": 721.72, "end": 727.5600000000001, "text": "p32에서 왜, 어떻게, 결과. 이 세 가시를 질문해야 한다고 하네요"}, {"start": 727.5600000000001, "end": 729.48, "text": "시스템 기획과 병행되지만"}, {"start": 729.48, "end": 732.12, "text": "싱글 게임은 세계관이 선행되기도 하고요"}, {"start": 732.12, "end": 736.6400000000001, "text": "여기서 진짜 흥미로운 게 p34부터 나오는 게임만의 핵심 규칙입니다"}, {"start": 736.6400000000001, "end": 738.72, "text": "아 현실과는 다른 거요?"}, {"start": 738.72, "end": 740.64, "text": "현실에선 노인이 약하지만"}, {"start": 740.64, "end": 744.24, "text": "무역게임에선 깨달음을 얻어 최강의 고수가 되는 거"}, {"start": 744.24, "end": 745.8000000000001, "text": "이거 진짜 재밌더라고요"}, {"start": 745.8000000000001, "end": 748.8000000000001, "text": "현실에선 칼에 보석 박으면 내구도가 떨어지지만"}, {"start": 748.8000000000001, "end": 751.9200000000001, "text": "게임에선 고대 연금술 덕에 능력치가 오르잖아요"}, {"start": 751.9200000000001, "end": 753.76, "text": "이런 당위성을 부여해야 합니다"}, {"start": 753.76, "end": 758.64, "text": "p30때부터 나오는 세계관 설정 디테일 리스트는 진짜 방대하네요"}, {"start": 758.64, "end": 763.6800000000001, "text": "시대, 장소부터 시작해서 p40의 세력 구성은 트레이드 오프가 있다고요?"}, {"start": 763.6800000000001, "end": 766.76, "text": "네 세력이 많으면 스토리는 풍부해지지만"}, {"start": 766.8, "end": 769.56, "text": "유저 전달이 너무 어려워진다는 단점이죠"}, {"start": 769.56, "end": 771.84, "text": "사회 시스템 변화가 갈등을 낳고"}, {"start": 771.84, "end": 774.96, "text": "가족 제도, 직업 같은 생활상에다가"}, {"start": 774.96, "end": 777.76, "text": "종교적 금기 같은 사회 통념까지"}, {"start": 777.76, "end": 780.36, "text": "p41부터 p44까지 쫙 나오네요"}, {"start": 780.36, "end": 785.8, "text": "마법이나 SF법칙, 언어의 어원, 통신수단도 시대에 맞춰야 하고요"}, {"start": 785.8, "end": 788.64, "text": "마지막으로 p48부터 p51까지"}, {"start": 788.64, "end": 792.68, "text": "평화 속 잠재적 갈등, 물리적 대립, 현재 핫한 소문"}, {"start": 792.68, "end": 796.04, "text": "그리고 과거 영웅의 역사까지 설정해야 완벽해집니다"}, {"start": 796.0799999999999, "end": 798.8399999999999, "text": "와 진짜 우주를 창조하는 일이네요"}, {"start": 798.8399999999999, "end": 802.5999999999999, "text": "근데 p50이 마지막에 진짜 팩트 폭격입니다"}, {"start": 802.5999999999999, "end": 804.36, "text": "수요일까지 과제해오라고?"}, {"start": 804.36, "end": 807.4, "text": "하하, 방대한 스케일의 MMORPG 말고"}, {"start": 807.4, "end": 809.16, "text": "디펜스나 퍼즐 게임처럼"}, {"start": 809.16, "end": 812.68, "text": "작은 규모로 배운 걸 적용해보라는 아주 실무적인 팁이죠"}, {"start": 812.68, "end": 817.36, "text": "네 이렇게 컨셉부터 세계관까지 모든 페이지를 샅샅이 살펴봤습니다"}, {"start": 817.36, "end": 820.8, "text": "이건 청취자 여러분께 아주 중요한 질문을 던지게 하죠"}, {"start": 820.8, "end": 824.0, "text": "여러분이 매일 쓰는 인스타그램이나 피트니스 앱을 떠올려 보세요"}, {"start": 824.0, "end": 825.28, "text": "오 비게임 앱이요?"}, {"start": 825.3199999999999, "end": 829.64, "text": "네 그 앱의 중심 테마는 어떤 감정을 건드리고 있을까요?"}, {"start": 829.64, "end": 832.68, "text": "여러분은 자신도 모르게 무한동력 엔진에 빠져 있나요?"}, {"start": 832.68, "end": 835.0, "text": "아니면 빠져나갈 수 없는 데드락 상태인가요?"}, {"start": 835.0, "end": 838.16, "text": "와 우리의 현실도 누군가 치밀하게 설계한"}, {"start": 838.16, "end": 841.16, "text": "거대한 기획서의 일부일지도 모르겠네요"}, {"start": 841.16, "end": 842.9599999999999, "text": "이거 완전 도발적인 생각이네요"}, {"start": 842.9599999999999, "end": 845.72, "text": "맞습니다 한 번쯤 성찰해볼 만한 주제죠"}, {"start": 845.72, "end": 849.12, "text": "네 청취자 여러분의 다음 기획을 열렬히 응원하면서"}, {"start": 849.12, "end": 852.16, "text": "오늘 저희가 준비한 깊이 있는 탐구는 여기까지입니다"}, {"start": 852.16, "end": 853.8, "text": "함께 해주셔서 감사합니다"}];
 
+(function() { // IIFE 래핑 — 전역 오염 방지
 let currentSlide = 0;
 let isAutoSync = true;
 let lastSubIdx = -1;
+// 이전 active 엘리먼트 캐싱 (querySelectorAll 제거)
+let _prevNavDot = null;
+let _prevIndexItem = null;
+let _prevMapSeg = null;
 const audio = document.getElementById('audio');
 const playBtn = document.getElementById('play-btn');
 const ICON_PLAY  = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg>';
 const ICON_PAUSE = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="1" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="7.5" y="1" width="3.5" height="12" rx="1" fill="currentColor"/></svg>';
 const timeDisplay = document.getElementById('time-display');
 const seekBar = document.getElementById('seek-bar');
+// DOM 참조 캐싱
+const _navDots = [];
+const _indexItems = [];
+const _overlayItems = [];
+const _mapSegments = [];
+// RAF 스로틀링
+let _rafPending = false;
 
 // 오디오 포함 슬라이드를 시작시간 순으로 정렬한 인덱스 (동기화용)
 const audioSlides = SLIDES
@@ -1261,7 +1291,11 @@ function init() {
     buildIndex();
     buildAudioMap();
     showSlide(0);
-    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('timeupdate', () => {
+        if (_rafPending) return;
+        _rafPending = true;
+        requestAnimationFrame(() => { _rafPending = false; onTimeUpdate(); });
+    });
     // 오디오 메타데이터 로드 시 시크바 max 갱신
     audio.addEventListener('loadedmetadata', updateSeekBarMax);
     audio.addEventListener('durationchange', updateSeekBarMax);
@@ -1280,12 +1314,20 @@ function init() {
         updateTimeDisplay();
         updateSubtitle(audio.currentTime);
     });
+    // 모바일: 메타데이터 미로드 시 로딩 상태 표시
+    if (!audio.duration || !isFinite(audio.duration)) {
+        playBtn.classList.add('loading');
+        timeDisplay.classList.add('loading');
+        timeDisplay.textContent = '로딩 중...';
+    }
 }
 
 function updateSeekBarMax() {
     if (audio.duration && isFinite(audio.duration)) {
         seekBar.max = audio.duration;
         updateTimeDisplay();
+        playBtn.classList.remove('loading');
+        timeDisplay.classList.remove('loading');
     }
 }
 
@@ -1298,17 +1340,31 @@ function buildNav() {
         dot.title = slide.id + ' — ' + slide.title;
         dot.onclick = () => { isAutoSync = false; showSlide(i); };
         nav.appendChild(dot);
+        _navDots.push(dot);
     });
+}
+
+function _buildIndexItem(slide, container) {
+    const item = document.createElement('div');
+    item.className = 'index-item' + (slide.hasAudio ? ' has-audio' : '');
+    const idSpan = document.createElement('span');
+    idSpan.className = 'idx-id';
+    idSpan.textContent = slide.id;
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'idx-title';
+    titleSpan.textContent = slide.title;
+    item.appendChild(idSpan);
+    item.appendChild(titleSpan);
+    container.appendChild(item);
+    return item;
 }
 
 function buildIndex() {
     const list = document.getElementById('index-list');
     SLIDES.forEach((slide, i) => {
-        const item = document.createElement('div');
-        item.className = 'index-item' + (slide.hasAudio ? ' has-audio' : '');
-        item.innerHTML = '<span class="idx-id">' + slide.id + '</span><span class="idx-title">' + slide.title + '</span>';
+        const item = _buildIndexItem(slide, list);
         item.onclick = () => { isAutoSync = false; showSlide(i); };
-        list.appendChild(item);
+        _indexItems.push(item);
     });
 }
 
@@ -1338,14 +1394,21 @@ function buildAudioMap() {
             syncSlideToTime(s.start);
         };
         map.appendChild(seg);
+        _mapSegments.push({el: seg, idx: s.idx});
         prevEnd = s.end;
     });
 }
 
 function updateAudioMap(currentIdx) {
-    document.querySelectorAll('.map-segment').forEach(seg => {
-        seg.classList.toggle('active', parseInt(seg.dataset.idx) === currentIdx);
-    });
+    if (_prevMapSeg) _prevMapSeg.classList.remove('active');
+    _prevMapSeg = null;
+    for (let i = 0; i < _mapSegments.length; i++) {
+        if (_mapSegments[i].idx === currentIdx) {
+            _mapSegments[i].el.classList.add('active');
+            _prevMapSeg = _mapSegments[i].el;
+            break;
+        }
+    }
 }
 
 function showSlide(index) {
@@ -1369,30 +1432,31 @@ function showSlide(index) {
         badge.className = 'badge-no-audio';
         badge.style.display = '';
     }
-    // 네비게이션 도트 활성화
-    document.querySelectorAll('.nav-dot').forEach((dot, i) => {
-        dot.classList.toggle('active', i === index);
-    });
-    // 인덱스 패널 활성화
-    document.querySelectorAll('.index-item').forEach((item, i) => {
-        item.classList.toggle('active', i === index);
-        if (i === index) item.scrollIntoView({block: 'nearest', behavior: 'smooth'});
-    });
+    // 네비게이션 도트 활성화 (캐싱)
+    if (_prevNavDot) _prevNavDot.classList.remove('active');
+    if (_navDots[index]) { _navDots[index].classList.add('active'); _prevNavDot = _navDots[index]; }
+    // 인덱스 패널 활성화 (캐싱)
+    if (_prevIndexItem) _prevIndexItem.classList.remove('active');
+    if (_indexItems[index]) {
+        _indexItems[index].classList.add('active');
+        _indexItems[index].scrollIntoView({block: 'nearest', behavior: 'smooth'});
+        _prevIndexItem = _indexItems[index];
+    }
     // 오디오 맵 활성화
     updateAudioMap(index);
 
     window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
-// 시간 기반 슬라이드 동기화 (정렬된 audioSlides 사용)
+// 시간 기반 슬라이드 동기화 (바이너리 서치)
 function syncSlideToTime(t) {
-    let targetIdx = -1;
-    for (let i = audioSlides.length - 1; i >= 0; i--) {
-        if (t >= audioSlides[i].start) {
-            targetIdx = audioSlides[i].idx;
-            break;
-        }
+    let lo = 0, hi = audioSlides.length - 1, result = -1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (audioSlides[mid].start <= t) { result = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
     }
+    const targetIdx = result >= 0 ? audioSlides[result].idx : -1;
     if (targetIdx >= 0 && targetIdx !== currentSlide) {
         showSlide(targetIdx);
     }
@@ -1421,7 +1485,7 @@ function formatTime(sec) {
 
 function togglePlay() {
     if (audio.paused) {
-        audio.play();
+        var p = audio.play(); if (p && p.catch) p.catch(function(){});
         playBtn.innerHTML = ICON_PAUSE;
         isAutoSync = true;
     } else {
@@ -1482,20 +1546,17 @@ function buildOverlayIndex() {
     const list = document.getElementById('index-overlay-list');
     if (!list) return;
     SLIDES.forEach((slide, i) => {
-        const item = document.createElement('div');
-        item.className = 'index-item' + (slide.hasAudio ? ' has-audio' : '');
-        item.innerHTML = '<span class="idx-id">' + slide.id + '</span><span class="idx-title">' + slide.title + '</span>';
+        const item = _buildIndexItem(slide, list);
         item.onclick = () => { isAutoSync = false; showSlide(i); closeOverlay(); };
-        list.appendChild(item);
+        _overlayItems.push(item);
     });
 }
 
 function openOverlay() {
     const ov = document.getElementById('index-overlay');
     ov.classList.add('open');
-    // 현재 슬라이드 하이라이트
-    const items = document.querySelectorAll('#index-overlay-list .index-item');
-    items.forEach((item, i) => {
+    // 현재 슬라이드 하이라이트 (캐싱된 참조)
+    _overlayItems.forEach((item, i) => {
         item.classList.toggle('active', i === currentSlide);
         if (i === currentSlide) item.scrollIntoView({block: 'center', behavior: 'smooth'});
     });
@@ -1527,7 +1588,8 @@ function initSubtitleControls() {
     mobileQuery.addEventListener('change', (e) => { isMobile = e.matches; });
 
     // localStorage에서 설정 복원
-    const saved = JSON.parse(localStorage.getItem('sc-sub-settings') || '{}');
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('sc-sub-settings') || '{}'); } catch(e) {}
     let fontSize = saved.fontSize || 16;
     let posMode = saved.posMode || 'bottom'; // bottom, top, overlay, hidden, free
     let freeX = saved.freeX;
@@ -1561,13 +1623,15 @@ function initSubtitleControls() {
     }
 
     function saveSettings() {
-        const r = box.getBoundingClientRect();
-        localStorage.setItem('sc-sub-settings', JSON.stringify({
-            fontSize, posMode, ccMode,
-            freeX: posMode === 'free' ? r.left : freeX,
-            freeY: posMode === 'free' ? r.top : freeY,
-            freeW: posMode === 'free' ? r.width : freeW,
-        }));
+        try {
+            const r = box.getBoundingClientRect();
+            localStorage.setItem('sc-sub-settings', JSON.stringify({
+                fontSize, posMode, ccMode,
+                freeX: posMode === 'free' ? r.left : freeX,
+                freeY: posMode === 'free' ? r.top : freeY,
+                freeW: posMode === 'free' ? r.width : freeW,
+            }));
+        } catch(e) {}
     }
 
     // 위치 전환 버튼: bottom↔free
@@ -1689,6 +1753,16 @@ function initSubtitleControls() {
     applyPos(posMode);
     updatePosIcon();
 }
+// showSlide/currentSlide를 모바일 FAB에서 접근 가능하도록 전역 노출
+window.showSlide = showSlide;
+window.openOverlay = openOverlay;
+window.closeOverlay = closeOverlay;
+window.togglePlay = togglePlay;
+window.changeSpeed = changeSpeed;
+window.skipTime = skipTime;
+Object.defineProperty(window, 'currentSlide', { get: () => currentSlide });
+Object.defineProperty(window, 'isAutoSync', { get: () => isAutoSync, set: v => { isAutoSync = v; } });
+})(); // IIFE 끝
 
 </script>
 </body>
