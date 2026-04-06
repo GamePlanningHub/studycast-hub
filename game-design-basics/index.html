@@ -2024,8 +2024,7 @@ function _steLsRestore() {
         var ago = Math.round((Date.now() - data.ts) / 60000);
         var count = Object.keys(data.changes).length;
         if (count === 0) return;
-        if (!confirm(count + '개의 미저장 자막 수정분이 있습니다 (' + ago + '분 전).
-복원할까요?')) {
+        if (!confirm(count + '개의 미저장 자막 수정분이 있습니다 (' + ago + '분 전).\n복원할까요?')) {
             localStorage.removeItem(STE_LS_KEY);
             return;
         }
