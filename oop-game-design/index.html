@@ -1088,8 +1088,17 @@ async function loadOverlayData() {
 
         _scLoaded = true;
 
-        // 편집 모드 초기화
-        initEditMode();
+        // 관리자가 아니면 편집 모드 비활성화
+        if (!_scData.isAdmin) {
+            _editMode = false;
+            var bar = document.querySelector('.edit-bar');
+            if (bar) bar.remove();
+            document.body.style.paddingTop = '';
+            var ce = document.getElementById('slide-content');
+            if (ce) ce.contentEditable = 'false';
+            var te = document.getElementById('slide-title');
+            if (te) te.contentEditable = 'false';
+        }
 
         // 현재 슬라이드 새로고침 (메모 패널 포함)
         showSlide(currentSlide);
