@@ -282,6 +282,24 @@ footer a {
 }
 footer a:hover { opacity: 1; }
 
+/* ========== 편집 모드 토글 ========== */
+.edit-toggle-wrap {
+    display: flex; justify-content: flex-end;
+    max-width: 600px; margin: 8px auto 0;
+}
+.edit-toggle {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid #ddd; background: #fff;
+    color: #888; font-size: 12px; cursor: pointer;
+    transition: all 0.2s;
+}
+.edit-toggle:hover { border-color: #bbb; color: #555; }
+.edit-toggle.active {
+    background: #FFF3E0; border-color: #F9A825;
+    color: #E65100;
+}
+
 @media (max-width: 600px) {
     header { padding: 14px 20px; }
     .header-inner { flex-wrap: wrap; gap: 10px; }
@@ -315,6 +333,13 @@ footer a:hover { opacity: 1; }
     <input type="text" id="search-input" placeholder="키워드로 강의 검색 (교안 기반, 띄어쓰기 무시)" autocomplete="off">
   </div>
   <div class="search-status" id="search-status"></div>
+</div>
+
+<div class="edit-toggle-wrap">
+  <button id="edit-toggle" class="edit-toggle" onclick="toggleEditMode()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+    <span id="edit-toggle-label">편집 모드</span>
+  </button>
 </div>
 
 <main>
@@ -416,9 +441,10 @@ function renderCards(entries, matchCounts, keyword) {
     entries.forEach((entry, i) => {
         const card = document.createElement('a');
         card.className = 'card';
+        const editParam = sessionStorage.getItem('sc-edit-mode') === '1' ? '&edit=1' : '';
         card.href = keyword
-            ? `/${entry.folder}/?q=${encodeURIComponent(keyword)}`
-            : `/${entry.folder}/`;
+            ? `/${entry.folder}/?q=${encodeURIComponent(keyword)}${editParam}`
+            : `/${entry.folder}/${editParam ? '?edit=1' : ''}`;
 
         const count = matchCounts ? matchCounts[entry.folder] : null;
         const badge = count ? `<span class="match-badge">${count}회 언급</span>` : '';
@@ -498,6 +524,30 @@ function escHtml(str) {
         .replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;');
 }
+
+// 편집 모드 토글
+function toggleEditMode() {
+    const btn = document.getElementById('edit-toggle');
+    const isActive = btn.classList.toggle('active');
+    sessionStorage.setItem('sc-edit-mode', isActive ? '1' : '');
+    // 이미 렌더된 카드의 href 갱신
+    document.querySelectorAll('.card').forEach(card => {
+        const url = new URL(card.href, location.origin);
+        if (isActive) {
+            url.searchParams.set('edit', '1');
+        } else {
+            url.searchParams.delete('edit');
+        }
+        card.href = url.pathname + url.search;
+    });
+}
+
+// 페이지 로드 시 편집 모드 복원
+(function restoreEditMode() {
+    if (sessionStorage.getItem('sc-edit-mode') === '1') {
+        document.getElementById('edit-toggle').classList.add('active');
+    }
+})();
 
 load();
 </script>
