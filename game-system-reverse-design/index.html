@@ -1244,6 +1244,7 @@ const SC_REPO = document.querySelector('meta[name="sc-repo"]')?.content || '';
 let _scData = { edits: {}, memos: {}, isAdmin: false };
 let _scLoaded = false;
 let _editMode = new URLSearchParams(location.search).has('edit');
+let _subtitleMode = new URLSearchParams(location.search).has('subtitle');
 
 async function loadOverlayData() {
     if (!SC_REPO) return;
@@ -1275,17 +1276,9 @@ async function loadOverlayData() {
                     TRANSCRIPT[idx].text = _scData.transcriptEdits[segId];
                 }
             }
-            // 자막 편집 모드에서도 originals/segments 갱신
-            if (_subtitleMode) {
-                for (var segId2 in _scData.transcriptEdits) {
-                    var idx2 = parseInt(segId2);
-                    if (idx2 < _steSegments.length) {
-                        _steSegments[idx2].text = _scData.transcriptEdits[segId2];
-                        _steOriginals[idx2] = _scData.transcriptEdits[segId2];
-                    }
-                }
-                _steRender();
-                _steLsRestore();
+            // IIFE 내부 콜백을 통해 자막 편집 상태 갱신
+            if (_subtitleMode && typeof _steApplyOverlay === 'function') {
+                _steApplyOverlay(_scData.transcriptEdits);
             }
         }
 
@@ -1830,13 +1823,25 @@ init();
 buildOverlayIndex();
 highlightKeywordMatches();
 // ========== 자막 편집 모드 ==========
-let _subtitleMode = new URLSearchParams(location.search).has('subtitle');
 let _steSegments = [];
 let _steOriginals = [];
 let _steScope = 'slide';
 let _steCurrentIdx = -1;
 
 const STE_LS_KEY = 'subtitle_backup_' + SC_REPO;
+
+// loadOverlayData(전역)에서 IIFE 내부 자막 편집 상태를 갱신하기 위한 브릿지
+window._steApplyOverlay = function(transcriptEdits) {
+    for (var segId in transcriptEdits) {
+        var idx = parseInt(segId);
+        if (idx < _steSegments.length) {
+            _steSegments[idx].text = transcriptEdits[segId];
+            _steOriginals[idx] = transcriptEdits[segId];
+        }
+    }
+    _steRender();
+    _steLsRestore();
+};
 
 function initSubtitleEdit() {
     if (!_subtitleMode) return;
