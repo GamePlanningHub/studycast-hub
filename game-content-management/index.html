@@ -1126,13 +1126,13 @@ async function loadOverlayData() {
             }
         }
 
-        // 현재 슬라이드 새로고침
-        showSlide(currentSlide);
-
         _scLoaded = true;
 
         // 편집 모드 초기화
         initEditMode();
+
+        // 현재 슬라이드 새로고침 (메모 패널 포함)
+        showSlide(currentSlide);
     } catch (e) {
         console.warn('SC API 연결 실패:', e);
     }
@@ -1506,7 +1506,9 @@ function showSlide(index) {
         document.getElementById('slide-content').contentEditable = 'true';
         document.getElementById('slide-title').contentEditable = 'true';
     }
-    // 메모 패널: 편집 모드면 항상, 일반 모드면 메모가 있을 때만
+    // 메모 패널: 이전 패널 항상 제거 후 조건부 재생성
+    var oldMemo = document.querySelector('.memo-panel');
+    if (oldMemo) oldMemo.remove();
     if (_scLoaded && (_editMode || (_scData.memos && _scData.memos[slide.id]))) {
         buildMemoPanel();
     }
