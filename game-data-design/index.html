@@ -1119,6 +1119,7 @@ const TRANSCRIPT = [{"start": 0.0, "end": 3.68, "text": "여러분 안녕하세�
 const SC_API = '';
 const SC_REPO = document.querySelector('meta[name="sc-repo"]')?.content || '';
 let _scData = { edits: {}, memos: {}, isAdmin: false };
+let _scLoaded = false;
 let _editMode = new URLSearchParams(location.search).has('edit');
 
 async function loadOverlayData() {
@@ -1143,6 +1144,7 @@ async function loadOverlayData() {
         showSlide(currentSlide);
 
         // 목차 표시 갱신
+        _scLoaded = true;
         updateIndexIndicators();
 
         // 편집 모드 초기화
@@ -1187,9 +1189,11 @@ function initEditMode() {
     bar.className = 'edit-bar visible';
     bar.innerHTML = '<span class="edit-bar-label">편집 모드</span>' +
         '<div class="edit-bar-actions">' +
-        '<button class="btn-cancel" onclick="cancelEdit()">취소</button>' +
-        '<button class="btn-save" onclick="saveEdit()">저장</button>' +
+        '<button class="btn-cancel">취소</button>' +
+        '<button class="btn-save">저장</button>' +
         '</div>';
+    bar.querySelector('.btn-cancel').addEventListener('click', cancelEdit);
+    bar.querySelector('.btn-save').addEventListener('click', saveEdit);
     document.body.prepend(bar);
 
     // content 영역 편집 가능하게
@@ -1212,8 +1216,8 @@ showSlide = function(index) {
     if (_editMode && _scData.isAdmin) {
         document.getElementById('slide-content').contentEditable = 'true';
     }
-    // 메모 패널 렌더링 (API 데이터 로드 후에만)
-    if (SC_REPO && (_scData.edits || _scData.memos)) buildMemoPanel();
+    // 메모 패널 렌더링 (API 데이터 로드 완료 후에만)
+    if (_scLoaded) buildMemoPanel();
 };
 
 // content 변경 감지
@@ -1277,7 +1281,7 @@ function buildMemoPanel() {
 
     var memoIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
-    panel.innerHTML = '<div class="memo-header" onclick="this.parentElement.classList.toggle(\'open\')">' +
+    panel.innerHTML = '<div class="memo-header">' +
         memoIcon + ' 메모' + (memoData ? '' : ' (없음)') +
         '</div>' +
         '<div class="memo-body">' +
@@ -1285,6 +1289,11 @@ function buildMemoPanel() {
         (canEdit ? '' : ' readonly') + '>' + (memoData ? memoData.text : '') + '</textarea>' +
         '<div class="memo-saved" id="memo-saved">저장됨</div>' +
         '</div>';
+
+    // 헤더 클릭 시 패널 열기/닫기
+    panel.querySelector('.memo-header').addEventListener('click', function() {
+        panel.classList.toggle('open');
+    });
 
     // slide-content 다음 형제로 삽입
     var contentEl = document.getElementById('slide-content');
