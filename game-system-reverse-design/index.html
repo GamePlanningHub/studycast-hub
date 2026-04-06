@@ -914,7 +914,9 @@ body {
 }
 .edit-bar.visible { display: flex; }
 .edit-bar-label { font-weight: 600; }
-.edit-bar-actions { display: flex; gap: 8px; }
+.edit-bar-actions { display: flex; gap: 8px; align-items: center; }
+.edit-save-status { font-size: 12px; color: #16A34A; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
+.edit-save-error { font-size: 12px; color: #DC2626; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
 .edit-bar button {
     padding: 6px 16px; border-radius: 6px; border: none;
     font-size: 12px; font-weight: 600; cursor: pointer;
@@ -1316,6 +1318,8 @@ function initEditMode() {
     bar.className = 'edit-bar visible';
     bar.innerHTML = '<span class="edit-bar-label">편집 모드</span>' +
         '<div class="edit-bar-actions">' +
+        '<span class="edit-save-status" id="edit-save-status">저장됨</span>' +
+        '<span class="edit-save-error" id="edit-save-error">저장 실패</span>' +
         '<button class="btn-cancel">취소</button>' +
         '<button class="btn-save">저장</button>' +
         '</div>';
@@ -1376,10 +1380,14 @@ async function saveEdit() {
         if (ovItem) ovItem.querySelector('.idx-title').textContent = title;
         // 메모 패널 복원
         buildMemoPanel();
-        alert('저장되었습니다.');
+        // 저장됨 상태 표시
+        var stat = document.getElementById('edit-save-status');
+        if (stat) { stat.style.opacity = '1'; setTimeout(function() { stat.style.opacity = '0'; }, 2500); }
     } catch (e) {
         buildMemoPanel();
-        alert('저장 실패: ' + e.message);
+        // 저장 실패 상태 표시
+        var err = document.getElementById('edit-save-error');
+        if (err) { err.style.opacity = '1'; setTimeout(function() { err.style.opacity = '0'; }, 3000); }
     }
 }
 
