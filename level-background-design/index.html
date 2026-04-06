@@ -802,17 +802,6 @@ body {
 #index-overlay-list .index-item {
     padding: 10px 16px;
 }
-/* ========== 편집/메모 인디케이터 ========== */
-.idx-edited {
-    display: inline-block; width: 6px; height: 6px;
-    background: #F9A825; border-radius: 50%;
-    margin-left: 6px; vertical-align: middle;
-}
-.idx-memo {
-    display: inline-block; width: 6px; height: 6px;
-    background: #42A5F5; border-radius: 50%;
-    margin-left: 4px; vertical-align: middle;
-}
 /* ========== 편집 모드 ========== */
 .edit-bar {
     display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
@@ -1196,43 +1185,13 @@ async function loadOverlayData() {
         // 현재 슬라이드 새로고침
         showSlide(currentSlide);
 
-        // 목차 표시 갱신
         _scLoaded = true;
-        updateIndexIndicators();
 
         // 편집 모드 초기화
         initEditMode();
     } catch (e) {
         console.warn('SC API 연결 실패:', e);
     }
-}
-
-function updateIndexIndicators() {
-    var items = document.querySelectorAll('#index-list .index-item');
-    var ovItems = document.querySelectorAll('#index-overlay-list .index-item');
-    SLIDES.forEach((slide, i) => {
-        var item = items[i];
-        var overlayItem = ovItems[i];
-        if (!item) return;
-
-        // 기존 표시 제거
-        item.querySelectorAll('.idx-edited, .idx-memo').forEach(el => el.remove());
-        if (overlayItem) overlayItem.querySelectorAll('.idx-edited, .idx-memo').forEach(el => el.remove());
-
-        var indicators = [];
-        if (_scData.edits[slide.id]) {
-            indicators.push('<span class="idx-edited" title="수정됨"></span>');
-        }
-        if (_scData.memos[slide.id]) {
-            indicators.push('<span class="idx-memo" title="메모"></span>');
-        }
-
-        if (indicators.length) {
-            var html = indicators.join('');
-            item.insertAdjacentHTML('beforeend', html);
-            if (overlayItem) overlayItem.insertAdjacentHTML('beforeend', html);
-        }
-    });
 }
 
 // ========== 편집 모드 UI ==========
@@ -1272,6 +1231,9 @@ async function saveEdit() {
     const contentEl = document.getElementById('slide-content');
     const titleEl = document.getElementById('slide-title');
     const slide = SLIDES[currentSlide];
+    // 메모 패널이 content 안에 들어가지 않도록 임시 제거 후 innerHTML 취득
+    var memoPanel = document.querySelector('.memo-panel');
+    if (memoPanel) memoPanel.remove();
     const content = contentEl.innerHTML;
     const title = titleEl.textContent;
 
@@ -1294,14 +1256,16 @@ async function saveEdit() {
         slide.title = title;
         _scData.edits[slide.id] = { content: content, title: title, updatedAt: new Date().toISOString() };
         _editDirty = false;
-        updateIndexIndicators();
         // 목차 제목도 갱신
         var idxItem = document.querySelectorAll('#index-list .index-item')[currentSlide];
         if (idxItem) idxItem.querySelector('.idx-title').textContent = title;
         var ovItem = document.querySelectorAll('#index-overlay-list .index-item')[currentSlide];
         if (ovItem) ovItem.querySelector('.idx-title').textContent = title;
+        // 메모 패널 복원
+        buildMemoPanel();
         alert('저장되었습니다.');
     } catch (e) {
+        buildMemoPanel();
         alert('저장 실패: ' + e.message);
     }
 }
@@ -1376,7 +1340,6 @@ async function saveMemo(sectionId, text) {
             if (!res.ok) throw new Error('저장 실패');
             _scData.memos[sectionId] = { text: text, updatedAt: new Date().toISOString() };
         }
-        updateIndexIndicators();
         var saved = document.getElementById('memo-saved');
         if (saved) { saved.classList.add('visible'); setTimeout(function() { saved.classList.remove('visible'); }, 2000); }
     } catch (e) {
