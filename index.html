@@ -336,7 +336,7 @@ footer a:hover { opacity: 1; }
 </div>
 
 <div class="edit-toggle-wrap">
-  <button id="edit-toggle" class="edit-toggle" onclick="toggleEditMode()">
+  <button id="edit-toggle" class="edit-toggle" style="display:none" onclick="toggleEditMode()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
     <span id="edit-toggle-label">편집 모드</span>
   </button>
@@ -542,11 +542,20 @@ function toggleEditMode() {
     });
 }
 
-// 페이지 로드 시 편집 모드 복원
-(function restoreEditMode() {
-    if (sessionStorage.getItem('sc-edit-mode') === '1') {
-        document.getElementById('edit-toggle').classList.add('active');
-    }
+// 관리자 확인 후 편집 토글 표시
+(async function checkAdmin() {
+    try {
+        const res = await fetch('/api/data/_check', { credentials: 'include' });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.isAdmin) {
+                document.getElementById('edit-toggle').style.display = '';
+                if (sessionStorage.getItem('sc-edit-mode') === '1') {
+                    document.getElementById('edit-toggle').classList.add('active');
+                }
+            }
+        }
+    } catch (e) {}
 })();
 
 load();
