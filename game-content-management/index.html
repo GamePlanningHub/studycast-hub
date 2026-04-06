@@ -684,8 +684,8 @@ body {
     flex: 1; min-width: 0; width: 100%; font-size: 14px; line-height: 1.65;
     color: var(--text-primary); background: transparent;
     border: 1px solid transparent; border-radius: 6px;
-    padding: 6px 8px; resize: none; overflow-wrap: break-word;
-    word-break: break-word;
+    padding: 6px 8px; resize: none; overflow: hidden;
+    overflow-wrap: break-word; word-break: break-word;
     font-family: 'Noto Sans KR', sans-serif;
     transition: border-color 0.15s, background 0.15s;
     min-height: 36px;
@@ -1879,7 +1879,6 @@ function _steRender() {
         ta.className = 'ste-text';
         ta.value = seg.text;
         ta.rows = 1;
-        _steAutoResize(ta);
         ta.addEventListener('input', function() {
             _steAutoResize(ta);
             seg.text = ta.value;
@@ -1905,9 +1904,14 @@ function _steRender() {
     if (shown === 0) {
         var empty = document.createElement('div');
         empty.style.cssText = 'text-align:center;padding:40px 0;color:var(--text-muted);font-size:14px;';
-        empty.textContent = query ? '검색 결과 없음' : '이 슬라이드에 자막이 없습니다.';
+        empty.textContent = query ? '검색 결과 없음' : '자막이 없습니다.';
         panel.appendChild(empty);
     }
+
+    // DOM append 후 전체 textarea 높이 조정
+    requestAnimationFrame(function() {
+        panel.querySelectorAll('.ste-text').forEach(_steAutoResize);
+    });
 }
 
 function _steAutoResize(ta) {
