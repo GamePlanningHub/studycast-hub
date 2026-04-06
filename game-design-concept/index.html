@@ -1478,8 +1478,10 @@ async function saveEdit() {
         _editDirty = false;
         updateIndexIndicators();
         // 목차 제목도 갱신
-        if (_indexItems[currentSlide]) _indexItems[currentSlide].querySelector('.idx-title').textContent = title;
-        if (_overlayItems[currentSlide]) _overlayItems[currentSlide].querySelector('.idx-title').textContent = title;
+        var idxItem = document.querySelectorAll('#index-list .index-item')[currentSlide];
+        if (idxItem) idxItem.querySelector('.idx-title').textContent = title;
+        var ovItem = document.querySelectorAll('#index-overlay-list .index-item')[currentSlide];
+        if (ovItem) ovItem.querySelector('.idx-title').textContent = title;
         alert('저장되었습니다.');
     } catch (e) {
         alert('저장 실패: ' + e.message);
