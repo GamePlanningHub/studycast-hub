@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="sc-repo" content="19 지역, MMORPG 레벨 디자인">
+<meta name="sc-repo" content="zone-mmorpg-level-design">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev" crossorigin>
 <title>19. 지역, MMORPG 레벨 디자인</title>
 <style>
 
@@ -870,7 +871,7 @@ body {
 <div id="app">
   <div id="player-header">
   <div id="audio-bar">
-    <audio id="audio" src="게임_속_자유는_철저히_계산된_환상.m4a" preload="auto"></audio>
+    <audio id="audio" src="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev/zone-mmorpg-level-design/%EA%B2%8C%EC%9E%84_%EC%86%8D_%EC%9E%90%EC%9C%A0%EB%8A%94_%EC%B2%A0%EC%A0%80%ED%9E%88_%EA%B3%84%EC%82%B0%EB%90%9C_%ED%99%98%EC%83%81.m4a" preload="auto"></audio>
     <div id="audio-controls">
       <a href="/" class="hub-btn" title="목록으로"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
       <span id="time-display">0:00 / 0:00</span>
@@ -1250,9 +1251,9 @@ function updateIndexIndicators() {
 
 // ========== 편집 모드 UI ==========
 function initEditMode() {
-    if (!_editMode || !_scData.isAdmin) return;
+    if (!_editMode) return;
 
-    // 편집 바 삽입
+    // 편집 바 삽입 (?edit=1이면 무조건 표시)
     const bar = document.createElement('div');
     bar.className = 'edit-bar visible';
     bar.innerHTML = '<span class="edit-bar-label">편집 모드</span>' +
@@ -1264,8 +1265,9 @@ function initEditMode() {
     bar.querySelector('.btn-save').addEventListener('click', saveEdit);
     document.body.prepend(bar);
 
-    // content 영역 편집 가능하게
+    // content + title 편집 가능하게
     document.getElementById('slide-content').contentEditable = 'true';
+    document.getElementById('slide-title').contentEditable = 'true';
 
     // body에 패딩 추가 (편집 바 높이만큼)
     document.body.style.paddingTop = '48px';
@@ -1568,7 +1570,7 @@ function updateAudioMap(currentIdx) {
 function showSlide(index) {
     if (index < 0 || index >= SLIDES.length) return;
     // 편집 모드: 저장 안 된 변경 경고
-    if (_editMode && _scData.isAdmin && _editDirty) {
+    if (_editMode && _editDirty) {
         if (!confirm('저장하지 않은 수정이 있습니다. 이동하시겠습니까?')) return;
         _editDirty = false;
     }
@@ -1604,8 +1606,8 @@ function showSlide(index) {
     // 오디오 맵 활성화
     updateAudioMap(index);
 
-    // 편집 모드: 저장 안 된 변경 체크 + contenteditable 유지
-    if (_editMode && _scData.isAdmin) {
+    // 편집 모드: contenteditable 유지
+    if (_editMode) {
         document.getElementById('slide-content').contentEditable = 'true';
         document.getElementById('slide-title').contentEditable = 'true';
     }
@@ -1672,7 +1674,7 @@ function skipTime(sec) {
 const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 document.addEventListener('keydown', (e) => {
     // 편집 모드에서는 키보드 단축키 비활성화
-    if (_editMode && _scData.isAdmin) return;
+    if (_editMode) return;
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
     if (e.code === 'ArrowLeft') { showSlide(currentSlide - 1); isAutoSync = false; }
     if (e.code === 'ArrowRight') { showSlide(currentSlide + 1); isAutoSync = false; }
@@ -1747,6 +1749,7 @@ document.querySelectorAll('#audio-map, #slide-nav').forEach(el => {
 init();
 buildOverlayIndex();
 highlightKeywordMatches();
+initEditMode();
 loadOverlayData();
 initSubtitleControls();
 

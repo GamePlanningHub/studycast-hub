@@ -1227,9 +1227,9 @@ function updateIndexIndicators() {
 
 // ========== 편집 모드 UI ==========
 function initEditMode() {
-    if (!_editMode || !_scData.isAdmin) return;
+    if (!_editMode) return;
 
-    // 편집 바 삽입
+    // 편집 바 삽입 (?edit=1이면 무조건 표시)
     const bar = document.createElement('div');
     bar.className = 'edit-bar visible';
     bar.innerHTML = '<span class="edit-bar-label">편집 모드</span>' +
@@ -1241,8 +1241,9 @@ function initEditMode() {
     bar.querySelector('.btn-save').addEventListener('click', saveEdit);
     document.body.prepend(bar);
 
-    // content 영역 편집 가능하게
+    // content + title 편집 가능하게
     document.getElementById('slide-content').contentEditable = 'true';
+    document.getElementById('slide-title').contentEditable = 'true';
 
     // body에 패딩 추가 (편집 바 높이만큼)
     document.body.style.paddingTop = '48px';
@@ -1545,7 +1546,7 @@ function updateAudioMap(currentIdx) {
 function showSlide(index) {
     if (index < 0 || index >= SLIDES.length) return;
     // 편집 모드: 저장 안 된 변경 경고
-    if (_editMode && _scData.isAdmin && _editDirty) {
+    if (_editMode && _editDirty) {
         if (!confirm('저장하지 않은 수정이 있습니다. 이동하시겠습니까?')) return;
         _editDirty = false;
     }
@@ -1581,8 +1582,8 @@ function showSlide(index) {
     // 오디오 맵 활성화
     updateAudioMap(index);
 
-    // 편집 모드: 저장 안 된 변경 체크 + contenteditable 유지
-    if (_editMode && _scData.isAdmin) {
+    // 편집 모드: contenteditable 유지
+    if (_editMode) {
         document.getElementById('slide-content').contentEditable = 'true';
         document.getElementById('slide-title').contentEditable = 'true';
     }
@@ -1649,7 +1650,7 @@ function skipTime(sec) {
 const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 document.addEventListener('keydown', (e) => {
     // 편집 모드에서는 키보드 단축키 비활성화
-    if (_editMode && _scData.isAdmin) return;
+    if (_editMode) return;
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
     if (e.code === 'ArrowLeft') { showSlide(currentSlide - 1); isAutoSync = false; }
     if (e.code === 'ArrowRight') { showSlide(currentSlide + 1); isAutoSync = false; }
@@ -1724,6 +1725,7 @@ document.querySelectorAll('#audio-map, #slide-nav').forEach(el => {
 init();
 buildOverlayIndex();
 highlightKeywordMatches();
+initEditMode();
 loadOverlayData();
 initSubtitleControls();
 
