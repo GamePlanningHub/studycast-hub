@@ -644,9 +644,11 @@ body {
 
 /* 세그먼트 목록 */
 .ste-panel {
-    overflow-y: auto; padding: 16px 20px 80px;
+    overflow-y: auto; padding: 16px 40px 80px;
     scroll-behavior: smooth;
-    max-height: calc(100vh - 260px);
+    max-height: calc(100vh - 200px);
+    max-width: 1000px;
+    margin: 0 auto;
 }
 .ste-panel::-webkit-scrollbar { width: 5px; }
 .ste-panel::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
@@ -677,13 +679,14 @@ body {
 .ste-row.active .ste-ts { color: var(--accent); font-weight: 600; }
 
 .ste-text {
-    flex: 1; font-size: 14px; line-height: 1.65;
+    flex: 1; min-width: 0; font-size: 14px; line-height: 1.65;
     color: var(--text-primary); background: transparent;
     border: 1px solid transparent; border-radius: 6px;
     padding: 6px 10px; resize: none; overflow: hidden;
     font-family: 'Noto Sans KR', sans-serif;
     transition: border-color 0.15s, background 0.15s;
     min-height: 36px;
+    word-break: break-all;
 }
 .ste-text:focus {
     outline: none; border-color: rgba(124,92,62,0.25);
@@ -989,8 +992,6 @@ body {
   <div id="subtitle-edit-area" style="display:none">
     <div class="subtitle-edit-toolbar">
       <div class="ste-left">
-        <button class="ste-scope-btn active" id="ste-scope-slide">현재 슬라이드</button>
-        <button class="ste-scope-btn" id="ste-scope-all">전체</button>
         <span class="ste-change-badge" id="ste-change-badge">0개 수정됨</span>
       </div>
       <div class="ste-right">
@@ -1671,8 +1672,6 @@ function showSlide(index) {
     }
     // 오디오 맵 활성화
     updateAudioMap(index);
-    // 자막 편집: 슬라이드 전환 시 세그먼트 갱신
-    if (_subtitleMode && _steScope === 'slide') _steRender();
 
     // 편집 모드: contenteditable 유지
     if (_editMode) {
@@ -1825,7 +1824,6 @@ highlightKeywordMatches();
 // ========== 자막 편집 모드 ==========
 var _steSegments = [];
 var _steOriginals = [];
-var _steScope = 'slide';
 var _steCurrentIdx = -1;
 
 const STE_LS_KEY = 'subtitle_backup_' + SC_REPO;
@@ -1867,8 +1865,6 @@ function initSubtitleEdit() {
     if (mobileFab) mobileFab.style.display = 'none';
 
     // 버튼 이벤트 바인딩 (IIFE 내부 함수 접근을 위해 addEventListener 사용)
-    document.getElementById('ste-scope-slide').addEventListener('click', function() { _steSetScope('slide'); });
-    document.getElementById('ste-scope-all').addEventListener('click', function() { _steSetScope('all'); });
     document.getElementById('ste-save-btn').addEventListener('click', function() { _steSave(); });
 
     var steSearchTimer;
@@ -1880,20 +1876,8 @@ function initSubtitleEdit() {
     _steRender();
 }
 
-function _steSetScope(scope) {
-    _steScope = scope;
-    document.getElementById('ste-scope-slide').classList.toggle('active', scope === 'slide');
-    document.getElementById('ste-scope-all').classList.toggle('active', scope === 'all');
-    _steRender();
-}
-
 function _steGetVisibleSegments() {
-    if (_steScope === 'all') return _steSegments;
-    var slide = SLIDES[currentSlide];
-    if (!slide || !slide.hasAudio) return [];
-    return _steSegments.filter(function(s) {
-        return s.start < slide.end && s.end > slide.start;
-    });
+    return _steSegments;
 }
 
 function _steRender() {
