@@ -91,9 +91,12 @@ header {
     max-width: 1000px; margin: 0 auto;
     padding: 24px 40px 0;
 }
+.search-row {
+    display: flex; align-items: center; gap: 8px;
+}
 .search-box {
     position: relative;
-    width: 100%;
+    flex: 1; min-width: 0;
 }
 .search-box input {
     width: 100%;
@@ -284,20 +287,20 @@ footer a:hover { opacity: 1; }
 
 /* ========== 편집 모드 토글 ========== */
 .edit-toggle-wrap {
-    display: flex; justify-content: flex-end;
-    max-width: 600px; margin: 8px auto 0;
+    display: flex; gap: 6px;
+    flex-shrink: 0;
 }
 .edit-toggle {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px 14px; border-radius: 20px;
-    border: 1px solid #ddd; background: #fff;
-    color: #888; font-size: 12px; cursor: pointer;
-    transition: all 0.2s;
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 6px;
+    border: 1px solid var(--border-dim); background: var(--bg-elevated);
+    color: var(--text-muted); font-size: 11px; cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
 }
-.edit-toggle:hover { border-color: #bbb; color: #555; }
+.edit-toggle:hover { border-color: var(--accent); color: var(--text-secondary); }
 .edit-toggle.active {
-    background: #FFF3E0; border-color: #F9A825;
-    color: #E65100;
+    background: rgba(124,92,62,0.08); border-color: var(--accent);
+    color: var(--accent); font-weight: 500;
 }
 
 @media (max-width: 600px) {
@@ -306,6 +309,10 @@ footer a:hover { opacity: 1; }
     .brand-title { font-size: 16px; }
     #repo-count { font-size: 10px; padding: 4px 10px; }
     .search-wrap { padding: 16px 14px 0; }
+    .search-row { flex-wrap: wrap; }
+    .edit-toggle-wrap { width: 100%; justify-content: flex-end; }
+    .edit-toggle { font-size: 10px; padding: 4px 8px; }
+    .edit-toggle svg { width: 12px; height: 12px; }
     main { padding: 16px 14px 60px; }
     #grid { grid-template-columns: 1fr; gap: 10px; }
     .card { padding: 16px 18px; }
@@ -328,22 +335,23 @@ footer a:hover { opacity: 1; }
 </header>
 
 <div class="search-wrap">
-  <div class="search-box">
-    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-    <input type="text" id="search-input" placeholder="키워드로 강의 검색 (교안 기반, 띄어쓰기 무시)" autocomplete="off">
+  <div class="search-row">
+    <div class="search-box">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="search-input" placeholder="키워드로 강의 검색 (교안 기반, 띄어쓰기 무시)" autocomplete="off">
+    </div>
+    <div class="edit-toggle-wrap">
+      <button id="edit-toggle" class="edit-toggle" style="display:none" onclick="toggleEditMode()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+        <span>교안 편집</span>
+      </button>
+      <button id="subtitle-toggle" class="edit-toggle" style="display:none" onclick="toggleSubtitleMode()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M5 16h14M5 12h8"/></svg>
+        <span>자막 편집</span>
+      </button>
+    </div>
   </div>
   <div class="search-status" id="search-status"></div>
-</div>
-
-<div class="edit-toggle-wrap">
-  <button id="edit-toggle" class="edit-toggle" style="display:none" onclick="toggleEditMode()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-    <span>교안 편집</span>
-  </button>
-  <button id="subtitle-toggle" class="edit-toggle" style="display:none" onclick="toggleSubtitleMode()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M5 16h14M5 12h8"/></svg>
-    <span>자막 편집</span>
-  </button>
 </div>
 
 <main>
