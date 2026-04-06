@@ -303,6 +303,77 @@ footer a:hover { opacity: 1; }
     color: var(--accent); font-weight: 500;
 }
 
+/* ========== 통계 뷰 ========== */
+#stats-view {
+    display: none;
+    max-width: 1000px; margin: 0 auto;
+    padding: 24px 40px 80px;
+}
+#stats-view.visible { display: block; }
+.stats-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px; flex-wrap: wrap;
+}
+.stats-toolbar select,
+.stats-toolbar button {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12px; padding: 6px 12px;
+    border: 1px solid var(--border-dim); border-radius: 6px;
+    background: var(--bg-elevated); color: var(--text-primary);
+    cursor: pointer; transition: var(--transition);
+}
+.stats-toolbar select:hover,
+.stats-toolbar button:hover { border-color: var(--accent); }
+.stats-date { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-secondary); min-width: 160px; text-align: center; }
+.stats-close {
+    margin-left: auto; background: none; border: none;
+    color: var(--text-muted); cursor: pointer; padding: 4px;
+    transition: var(--transition);
+}
+.stats-close:hover { color: var(--text-primary); }
+.stats-section {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px;
+}
+.stats-section h3 {
+    font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 16px;
+}
+.stats-chart { width: 100%; overflow-x: auto; }
+.stats-chart svg { display: block; }
+.stats-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+}
+.stats-table th {
+    text-align: left; padding: 8px 12px;
+    font-weight: 500; color: var(--text-muted);
+    border-bottom: 1px solid var(--border-dim);
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.stats-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    color: var(--text-primary);
+}
+.stats-table tr:last-child td { border-bottom: none; }
+.stats-table .num {
+    font-family: 'JetBrains Mono', monospace;
+    text-align: right; font-size: 12px;
+}
+.stats-empty {
+    text-align: center; padding: 40px;
+    color: var(--text-muted); font-size: 13px;
+}
+@media (max-width: 600px) {
+    #stats-view { padding: 16px 14px 60px; }
+    .stats-toolbar { gap: 8px; }
+    .stats-date { min-width: 120px; font-size: 11px; }
+}
+
 @media (max-width: 600px) {
     header { padding: 14px 20px; }
     .header-inner { flex-wrap: wrap; gap: 10px; }
@@ -349,6 +420,10 @@ footer a:hover { opacity: 1; }
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M5 16h14M5 12h8"/></svg>
         <span>자막 편집</span>
       </button>
+      <button id="stats-toggle" class="edit-toggle" style="display:none" onclick="toggleStats()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        <span>통계</span>
+      </button>
     </div>
   </div>
   <div class="search-status" id="search-status"></div>
@@ -369,6 +444,38 @@ footer a:hover { opacity: 1; }
     <p>등록된 강의가 없습니다.<br>파이프라인으로 새 SC를 배포해보세요.</p>
   </div>
 </main>
+
+<div id="stats-view">
+  <div class="stats-toolbar">
+    <select id="stats-period" onchange="loadStats()">
+      <option value="day">일별</option>
+      <option value="week">주별</option>
+      <option value="month">월별</option>
+    </select>
+    <button onclick="moveDate(-1)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="stats-date" id="stats-date-label"></span>
+    <button onclick="moveDate(1)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <button class="stats-close" onclick="toggleStats()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+  <div class="stats-section">
+    <h3>방문 추이</h3>
+    <div class="stats-chart" id="stats-chart"></div>
+  </div>
+  <div class="stats-section">
+    <h3>강의별 방문량</h3>
+    <div id="stats-lectures"></div>
+  </div>
+  <div class="stats-section">
+    <h3>유저별 방문빈도</h3>
+    <div id="stats-users"></div>
+  </div>
+</div>
 
 <footer>
   © 디벨로켓. All rights reserved. 무단 복제·배포 금지.<br>
@@ -580,6 +687,134 @@ function updateCardLinks() {
     });
 }
 
+// ========== 통계 ==========
+let statsDate = new Date().toISOString().slice(0, 10);
+
+function toggleStats() {
+    const statsView = document.getElementById('stats-view');
+    const mainEl = document.querySelector('main');
+    const searchWrap = document.querySelector('.search-wrap');
+    const btn = document.getElementById('stats-toggle');
+    const isActive = statsView.classList.toggle('visible');
+
+    mainEl.style.display = isActive ? 'none' : '';
+    searchWrap.style.display = isActive ? 'none' : '';
+    btn.classList.toggle('active', isActive);
+
+    if (isActive) loadStats();
+}
+
+function moveDate(dir) {
+    const period = document.getElementById('stats-period').value;
+    const d = new Date(statsDate + 'T00:00:00Z');
+    if (period === 'day') d.setUTCDate(d.getUTCDate() + dir);
+    else if (period === 'week') d.setUTCDate(d.getUTCDate() + dir * 7);
+    else if (period === 'month') d.setUTCMonth(d.getUTCMonth() + dir);
+    statsDate = d.toISOString().slice(0, 10);
+    loadStats();
+}
+
+async function loadStats() {
+    const period = document.getElementById('stats-period').value;
+    const chartEl = document.getElementById('stats-chart');
+    const lecturesEl = document.getElementById('stats-lectures');
+    const usersEl = document.getElementById('stats-users');
+    const dateLabel = document.getElementById('stats-date-label');
+
+    chartEl.innerHTML = '<div class="stats-empty">불러오는 중...</div>';
+    lecturesEl.innerHTML = '';
+    usersEl.innerHTML = '';
+
+    try {
+        const res = await fetch(`/api/stats?period=${period}&date=${statsDate}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('통계 로드 실패');
+        const data = await res.json();
+
+        // 날짜 레이블
+        if (data.range[0] === data.range[1]) {
+            dateLabel.textContent = data.range[0];
+        } else {
+            dateLabel.textContent = `${data.range[0]} ~ ${data.range[1]}`;
+        }
+
+        // 차트
+        renderChart(chartEl, data.daily);
+
+        // 강의별 테이블
+        if (data.byLecture.length === 0) {
+            lecturesEl.innerHTML = '<div class="stats-empty">데이터 없음</div>';
+        } else {
+            lecturesEl.innerHTML = `<table class="stats-table">
+                <thead><tr><th>강의</th><th class="num">방문</th><th class="num">유저 수</th></tr></thead>
+                <tbody>${data.byLecture.map(l => `<tr>
+                    <td>${escHtml(l.title)}</td>
+                    <td class="num">${l.visits}</td>
+                    <td class="num">${l.uniqueUsers}</td>
+                </tr>`).join('')}</tbody>
+            </table>`;
+        }
+
+        // 유저별 테이블
+        if (data.byUser.length === 0) {
+            usersEl.innerHTML = '<div class="stats-empty">데이터 없음</div>';
+        } else {
+            usersEl.innerHTML = `<table class="stats-table">
+                <thead><tr><th>이메일</th><th class="num">방문</th><th class="num">최근 접속</th></tr></thead>
+                <tbody>${data.byUser.map(u => `<tr>
+                    <td>${escHtml(u.email)}</td>
+                    <td class="num">${u.visits}</td>
+                    <td class="num">${formatDate(u.lastVisit)}</td>
+                </tr>`).join('')}</tbody>
+            </table>`;
+        }
+    } catch (e) {
+        chartEl.innerHTML = `<div class="stats-empty">${escHtml(e.message)}</div>`;
+    }
+}
+
+function renderChart(container, daily) {
+    if (!daily || daily.length === 0) {
+        container.innerHTML = '<div class="stats-empty">데이터 없음</div>';
+        return;
+    }
+
+    const maxVal = Math.max(...daily.map(d => d.visits), 1);
+    const barW = Math.max(24, Math.min(60, Math.floor(800 / daily.length) - 8));
+    const gap = 6;
+    const chartH = 160;
+    const labelH = 30;
+    const svgW = daily.length * (barW + gap);
+    const svgH = chartH + labelH;
+
+    let bars = '';
+    daily.forEach((d, i) => {
+        const x = i * (barW + gap);
+        const h = maxVal > 0 ? (d.visits / maxVal) * chartH : 0;
+        const y = chartH - h;
+        const color = d.visits > 0 ? 'var(--accent)' : 'var(--border-dim)';
+        bars += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3" fill="${color}" opacity="0.7"/>`;
+        // 값 라벨 (0이 아닌 경우)
+        if (d.visits > 0) {
+            bars += `<text x="${x + barW/2}" y="${y - 4}" text-anchor="middle" font-size="10" font-family="JetBrains Mono, monospace" fill="var(--text-secondary)">${d.visits}</text>`;
+        }
+        // 날짜 라벨
+        const label = d.date.slice(5); // MM-DD
+        bars += `<text x="${x + barW/2}" y="${chartH + 16}" text-anchor="middle" font-size="9" font-family="JetBrains Mono, monospace" fill="var(--text-muted)">${label}</text>`;
+    });
+
+    container.innerHTML = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">${bars}</svg>`;
+}
+
+function formatDate(isoStr) {
+    if (!isoStr) return '-';
+    const d = new Date(isoStr);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${mm}-${dd} ${hh}:${mi}`;
+}
+
 // 관리자 확인 후 편집/자막 토글 표시 + 세션 복원
 (async function checkAdmin() {
     try {
@@ -589,6 +824,7 @@ function updateCardLinks() {
             if (data.isAdmin) {
                 document.getElementById('edit-toggle').style.display = '';
                 document.getElementById('subtitle-toggle').style.display = '';
+                document.getElementById('stats-toggle').style.display = '';
                 // 세션 복원
                 if (sessionStorage.getItem('sc-edit-mode') === '1') {
                     document.getElementById('edit-toggle').classList.add('active');
