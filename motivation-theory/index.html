@@ -1247,7 +1247,7 @@ async function loadOverlayData() {
         if (!res.ok) return;
         _scData = await res.json();
 
-        // 수정본 적용: SLIDES content + title 교체
+        // 수정본 적용: SLIDES content + title 교체 + 목차 DOM 갱신
         for (const [pid, edit] of Object.entries(_scData.edits)) {
             const idx = SLIDES.findIndex(s => s.id === pid);
             if (idx !== -1) {
@@ -1256,6 +1256,9 @@ async function loadOverlayData() {
                 if (edit.title) {
                     SLIDES[idx]._originalTitle = SLIDES[idx]._originalTitle || SLIDES[idx].title;
                     SLIDES[idx].title = edit.title;
+                    // 목차 DOM도 갱신
+                    if (_indexItems[idx]) _indexItems[idx].querySelector('.idx-title').textContent = edit.title;
+                    if (_overlayItems[idx]) _overlayItems[idx].querySelector('.idx-title').textContent = edit.title;
                 }
             }
         }
