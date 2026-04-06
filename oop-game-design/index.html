@@ -1503,8 +1503,11 @@ function showSlide(index) {
         document.getElementById('slide-content').contentEditable = 'true';
         document.getElementById('slide-title').contentEditable = 'true';
     }
-    // 메모 패널 렌더링 (API 데이터 로드 완료 후에만)
-    if (_scLoaded && _editMode) buildMemoPanel();
+    // 메모 패널: 편집 모드면 항상, 일반 모드면 메모가 있을 때만
+    if (_scLoaded) {
+        var slide = SLIDES[index];
+        if (_editMode || (_scData.memos && _scData.memos[slide.id])) buildMemoPanel();
+    }
 
     window.scrollTo({top: 0, behavior: 'smooth'});
 }
