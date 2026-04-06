@@ -1133,21 +1133,6 @@ function initEditMode() {
 
 let _editDirty = false;
 
-// 슬라이드 전환 시 저장 안 된 변경 체크
-const _origShowSlide = showSlide;
-showSlide = function(index) {
-    if (_editMode && _scData.isAdmin && _editDirty) {
-        if (!confirm('저장하지 않은 수정이 있습니다. 이동하시겠습니까?')) return;
-        _editDirty = false;
-    }
-    _origShowSlide(index);
-    if (_editMode && _scData.isAdmin) {
-        document.getElementById('slide-content').contentEditable = 'true';
-    }
-    // 메모 패널 렌더링 (API 데이터 로드 완료 후에만)
-    if (_scLoaded) buildMemoPanel();
-};
-
 // content 변경 감지
 document.addEventListener('input', (e) => {
     if (e.target.id === 'slide-content' || e.target.closest('#slide-content')) {
@@ -1435,6 +1420,11 @@ function updateAudioMap(currentIdx) {
 
 function showSlide(index) {
     if (index < 0 || index >= SLIDES.length) return;
+    // 편집 모드: 저장 안 된 변경 경고
+    if (_editMode && _scData.isAdmin && _editDirty) {
+        if (!confirm('저장하지 않은 수정이 있습니다. 이동하시겠습니까?')) return;
+        _editDirty = false;
+    }
     currentSlide = index;
     const slide = SLIDES[index];
     document.getElementById('slide-id').textContent = slide.id;
@@ -1466,6 +1456,13 @@ function showSlide(index) {
     }
     // 오디오 맵 활성화
     updateAudioMap(index);
+
+    // 편집 모드: 저장 안 된 변경 체크 + contenteditable 유지
+    if (_editMode && _scData.isAdmin) {
+        document.getElementById('slide-content').contentEditable = 'true';
+    }
+    // 메모 패널 렌더링 (API 데이터 로드 완료 후에만)
+    if (_scLoaded) buildMemoPanel();
 
     window.scrollTo({top: 0, behavior: 'smooth'});
 }
