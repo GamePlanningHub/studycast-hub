@@ -401,7 +401,7 @@ async function loadSearchIndex() {
 }
 
 // 카드 렌더링 (matchCount가 있으면 배지 표시)
-function renderCards(entries, matchCounts) {
+function renderCards(entries, matchCounts, keyword) {
     const grid = document.getElementById('grid');
     const empty = document.getElementById('empty');
     grid.innerHTML = '';
@@ -416,7 +416,9 @@ function renderCards(entries, matchCounts) {
     entries.forEach((entry, i) => {
         const card = document.createElement('a');
         card.className = 'card';
-        card.href = `/${entry.folder}/`;
+        card.href = keyword
+            ? `/${entry.folder}/?q=${encodeURIComponent(keyword)}`
+            : `/${entry.folder}/`;
 
         const count = matchCounts ? matchCounts[entry.folder] : null;
         const badge = count ? `<span class="match-badge">${count}회 언급</span>` : '';
@@ -475,7 +477,7 @@ function doSearch(keyword) {
         .filter(e => matchCounts[e.folder])
         .sort((a, b) => matchCounts[b.folder] - matchCounts[a.folder]);
 
-    renderCards(matched, matchCounts);
+    renderCards(matched, matchCounts, keyword);
     counter.textContent = `검색 결과 ${matched.length}개`;
     searchStatus.textContent = matched.length > 0
         ? `"${keyword}" — ${matched.length}개 강의에서 발견`

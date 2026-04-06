@@ -529,6 +529,18 @@ body {
     color: var(--text-primary);
     font-weight: 500;
 }
+/* 키워드 매칭 하이라이트 */
+.index-item.keyword-match {
+    background: rgba(255, 213, 79, 0.18);
+    border-left-color: #F9A825;
+}
+.index-item.keyword-match:hover {
+    background: rgba(255, 213, 79, 0.28);
+}
+.index-item.keyword-match.active {
+    background: rgba(255, 213, 79, 0.22);
+    border-left-color: var(--accent);
+}
 /* 교안 전용 목차 항목 */
 .index-item:not(.has-audio) .idx-id::after {
     content: '';
@@ -1151,6 +1163,24 @@ function buildIndex() {
     });
 }
 
+// URL ?q= 파라미터로 전달된 키워드가 포함된 목차 항목 하이라이트
+function highlightKeywordMatches() {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (!q) return;
+    const kw = q.trim().replace(/\s/g, '').toLowerCase();
+    if (!kw) return;
+    SLIDES.forEach((slide, i) => {
+        // HTML 태그 제거 후 띄어쓰기 제거 + 소문자 변환
+        const text = (slide.title + ' ' + slide.content.replace(/<[^>]*>/g, ''))
+            .replace(/\s/g, '').toLowerCase();
+        if (text.indexOf(kw) !== -1) {
+            if (_indexItems[i]) _indexItems[i].classList.add('keyword-match');
+            if (_overlayItems[i]) _overlayItems[i].classList.add('keyword-match');
+        }
+    });
+}
+
 function buildAudioMap() {
     const map = document.getElementById('audio-map');
     if (!map) return;
@@ -1360,6 +1390,7 @@ document.querySelectorAll('#audio-map, #slide-nav').forEach(el => {
 
 init();
 buildOverlayIndex();
+highlightKeywordMatches();
 initSubtitleControls();
 
 // ========== 플로팅 자막 드래그 + 컨트롤 ==========
