@@ -1139,12 +1139,16 @@ async function loadOverlayData() {
         if (!res.ok) return;
         _scData = await res.json();
 
-        // 수정본 적용: SLIDES content 교체
+        // 수정본 적용: SLIDES content + title 교체
         for (const [pid, edit] of Object.entries(_scData.edits)) {
             const idx = SLIDES.findIndex(s => s.id === pid);
             if (idx !== -1) {
                 SLIDES[idx]._originalContent = SLIDES[idx]._originalContent || SLIDES[idx].content;
                 SLIDES[idx].content = edit.content;
+                if (edit.title) {
+                    SLIDES[idx]._originalTitle = SLIDES[idx]._originalTitle || SLIDES[idx].title;
+                    SLIDES[idx].title = edit.title;
+                }
             }
         }
 
@@ -1213,17 +1217,19 @@ function initEditMode() {
 
 let _editDirty = false;
 
-// content 변경 감지
+// content/title 변경 감지
 document.addEventListener('input', (e) => {
-    if (e.target.id === 'slide-content' || e.target.closest('#slide-content')) {
+    if (e.target.id === 'slide-content' || e.target.closest('#slide-content') || e.target.id === 'slide-title') {
         _editDirty = true;
     }
 });
 
 async function saveEdit() {
     const contentEl = document.getElementById('slide-content');
+    const titleEl = document.getElementById('slide-title');
     const slide = SLIDES[currentSlide];
     const content = contentEl.innerHTML;
+    const title = titleEl.textContent;
 
     try {
         const res = await fetch(
@@ -1232,17 +1238,22 @@ async function saveEdit() {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: content }),
+                body: JSON.stringify({ content: content, title: title }),
             }
         );
         if (!res.ok) throw new Error('저장 실패');
 
         // 로컬 데이터 갱신
         slide._originalContent = slide._originalContent || slide.content;
+        slide._originalTitle = slide._originalTitle || slide.title;
         slide.content = content;
-        _scData.edits[slide.id] = { content: content, updatedAt: new Date().toISOString() };
+        slide.title = title;
+        _scData.edits[slide.id] = { content: content, title: title, updatedAt: new Date().toISOString() };
         _editDirty = false;
         updateIndexIndicators();
+        // 목차 제목도 갱신
+        if (_indexItems[currentSlide]) _indexItems[currentSlide].querySelector('.idx-title').textContent = title;
+        if (_overlayItems[currentSlide]) _overlayItems[currentSlide].querySelector('.idx-title').textContent = title;
         alert('저장되었습니다.');
     } catch (e) {
         alert('저장 실패: ' + e.message);
@@ -1540,6 +1551,7 @@ function showSlide(index) {
     // 편집 모드: 저장 안 된 변경 체크 + contenteditable 유지
     if (_editMode && _scData.isAdmin) {
         document.getElementById('slide-content').contentEditable = 'true';
+        document.getElementById('slide-title').contentEditable = 'true';
     }
     // 메모 패널 렌더링 (API 데이터 로드 완료 후에만)
     if (_scLoaded) buildMemoPanel();
@@ -1603,6 +1615,8 @@ function skipTime(sec) {
 
 const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 document.addEventListener('keydown', (e) => {
+    // 편집 모드에서는 키보드 단축키 비활성화
+    if (_editMode && _scData.isAdmin) return;
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
     if (e.code === 'ArrowLeft') { showSlide(currentSlide - 1); isAutoSync = false; }
     if (e.code === 'ArrowRight') { showSlide(currentSlide + 1); isAutoSync = false; }

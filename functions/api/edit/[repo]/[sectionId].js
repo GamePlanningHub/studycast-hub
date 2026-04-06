@@ -13,6 +13,7 @@ export async function onRequestPut(context) {
 
   const key = `edit:${params.repo}/${params.sectionId}`;
   const value = { content: body.content, updatedAt: new Date().toISOString() };
+  if (typeof body.title === "string") value.title = body.title;
   await env.STUDYCAST_DATA.put(key, JSON.stringify(value));
   return json({ ok: true, ...value });
 }
