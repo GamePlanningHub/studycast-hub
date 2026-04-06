@@ -9,8 +9,8 @@ function shouldLog(pathname) {
 }
 
 function extractRepo(pathname) {
-  // "/" → 허브
-  if (pathname === '/' || pathname === '/index.html') return '_hub';
+  // 허브 자체는 로깅 제외 (유의미한 지표 아님)
+  if (pathname === '/' || pathname === '/index.html') return null;
   // "/{repo}/" 또는 "/{repo}/index.html" → SC 뷰어
   const match = pathname.match(/^\/([a-z0-9-]+)\/?(?:index\.html)?$/);
   return match ? match[1] : null;
