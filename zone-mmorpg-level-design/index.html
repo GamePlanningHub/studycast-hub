@@ -1616,9 +1616,8 @@ function showSlide(index) {
         document.getElementById('slide-title').contentEditable = 'true';
     }
     // 메모 패널: 편집 모드면 항상, 일반 모드면 메모가 있을 때만
-    if (_scLoaded) {
-        var slide = SLIDES[index];
-        if (_editMode || (_scData.memos && _scData.memos[slide.id])) buildMemoPanel();
+    if (_scLoaded && (_editMode || (_scData.memos && _scData.memos[slide.id]))) {
+        buildMemoPanel();
     }
 
     window.scrollTo({top: 0, behavior: 'smooth'});
