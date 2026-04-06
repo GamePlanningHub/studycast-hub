@@ -1200,16 +1200,18 @@ async function loadOverlayData() {
 }
 
 function updateIndexIndicators() {
+    var items = document.querySelectorAll('#index-list .index-item');
+    var ovItems = document.querySelectorAll('#index-overlay-list .index-item');
     SLIDES.forEach((slide, i) => {
-        const item = _indexItems[i];
-        const overlayItem = _overlayItems[i];
+        var item = items[i];
+        var overlayItem = ovItems[i];
         if (!item) return;
 
         // 기존 표시 제거
         item.querySelectorAll('.idx-edited, .idx-memo').forEach(el => el.remove());
         if (overlayItem) overlayItem.querySelectorAll('.idx-edited, .idx-memo').forEach(el => el.remove());
 
-        const indicators = [];
+        var indicators = [];
         if (_scData.edits[slide.id]) {
             indicators.push('<span class="idx-edited" title="수정됨"></span>');
         }
@@ -1218,7 +1220,7 @@ function updateIndexIndicators() {
         }
 
         if (indicators.length) {
-            const html = indicators.join('');
+            var html = indicators.join('');
             item.insertAdjacentHTML('beforeend', html);
             if (overlayItem) overlayItem.insertAdjacentHTML('beforeend', html);
         }
@@ -1590,7 +1592,7 @@ function showSlide(index) {
         document.getElementById('slide-title').contentEditable = 'true';
     }
     // 메모 패널 렌더링 (API 데이터 로드 완료 후에만)
-    if (_scLoaded) buildMemoPanel();
+    if (_scLoaded && _editMode) buildMemoPanel();
 
     window.scrollTo({top: 0, behavior: 'smooth'});
 }
