@@ -338,7 +338,11 @@ footer a:hover { opacity: 1; }
 <div class="edit-toggle-wrap">
   <button id="edit-toggle" class="edit-toggle" style="display:none" onclick="toggleEditMode()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-    <span id="edit-toggle-label">편집 모드</span>
+    <span>교안 편집</span>
+  </button>
+  <button id="subtitle-toggle" class="edit-toggle" style="display:none" onclick="toggleSubtitleMode()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M5 16h14M5 12h8"/></svg>
+    <span>자막 편집</span>
   </button>
 </div>
 
@@ -441,10 +445,13 @@ function renderCards(entries, matchCounts, keyword) {
     entries.forEach((entry, i) => {
         const card = document.createElement('a');
         card.className = 'card';
-        const editParam = sessionStorage.getItem('sc-edit-mode') === '1' ? '&edit=1' : '';
+        const editParam = sessionStorage.getItem('sc-edit-mode') === '1' ? 'edit=1' : '';
+        const subtitleParam = sessionStorage.getItem('sc-subtitle-mode') === '1' ? 'subtitle=1' : '';
+        const params = [editParam, subtitleParam].filter(Boolean).join('&');
+        const paramStr = params ? '?' + params : '';
         card.href = keyword
-            ? `/${entry.folder}/?q=${encodeURIComponent(keyword)}${editParam}`
-            : `/${entry.folder}/${editParam ? '?edit=1' : ''}`;
+            ? `/${entry.folder}/?q=${encodeURIComponent(keyword)}${params ? '&' + params : ''}`
+            : `/${entry.folder}/${paramStr}`;
 
         const count = matchCounts ? matchCounts[entry.folder] : null;
         const badge = count ? `<span class="match-badge">${count}회 언급</span>` : '';
@@ -525,24 +532,47 @@ function escHtml(str) {
         .replace(/"/g,'&quot;');
 }
 
-// 편집 모드 토글
+// 교안 편집 토글 (자막 편집과 상호 배타)
 function toggleEditMode() {
     const btn = document.getElementById('edit-toggle');
+    const subBtn = document.getElementById('subtitle-toggle');
     const isActive = btn.classList.toggle('active');
+    if (isActive) {
+        subBtn.classList.remove('active');
+        sessionStorage.setItem('sc-subtitle-mode', '');
+    }
     sessionStorage.setItem('sc-edit-mode', isActive ? '1' : '');
-    // 이미 렌더된 카드의 href 갱신
+    updateCardLinks();
+}
+
+// 자막 편집 토글 (교안 편집과 상호 배타)
+function toggleSubtitleMode() {
+    const btn = document.getElementById('subtitle-toggle');
+    const editBtn = document.getElementById('edit-toggle');
+    const isActive = btn.classList.toggle('active');
+    if (isActive) {
+        editBtn.classList.remove('active');
+        sessionStorage.setItem('sc-edit-mode', '');
+    }
+    sessionStorage.setItem('sc-subtitle-mode', isActive ? '1' : '');
+    updateCardLinks();
+}
+
+// 카드 링크 갱신 (편집/자막 파라미터 반영)
+function updateCardLinks() {
+    const editMode = sessionStorage.getItem('sc-edit-mode') === '1';
+    const subtitleMode = sessionStorage.getItem('sc-subtitle-mode') === '1';
     document.querySelectorAll('.card').forEach(card => {
         const url = new URL(card.href, location.origin);
-        if (isActive) {
-            url.searchParams.set('edit', '1');
-        } else {
-            url.searchParams.delete('edit');
-        }
+        url.searchParams.delete('edit');
+        url.searchParams.delete('subtitle');
+        if (editMode) url.searchParams.set('edit', '1');
+        if (subtitleMode) url.searchParams.set('subtitle', '1');
         card.href = url.pathname + url.search;
     });
 }
 
-// 관리자 확인 후 편집 토글 표시
+// 관리자 확인 후 편집/자막 토글 표시 + 세션 복원
 (async function checkAdmin() {
     try {
         const res = await fetch('/api/data/_check', { credentials: 'include' });
@@ -550,8 +580,13 @@ function toggleEditMode() {
             const data = await res.json();
             if (data.isAdmin) {
                 document.getElementById('edit-toggle').style.display = '';
+                document.getElementById('subtitle-toggle').style.display = '';
+                // 세션 복원
                 if (sessionStorage.getItem('sc-edit-mode') === '1') {
                     document.getElementById('edit-toggle').classList.add('active');
+                }
+                if (sessionStorage.getItem('sc-subtitle-mode') === '1') {
+                    document.getElementById('subtitle-toggle').classList.add('active');
                 }
             }
         }

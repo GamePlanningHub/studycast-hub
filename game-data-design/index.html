@@ -596,6 +596,108 @@ body {
     #subtitle-text { font-size: 0.85rem; }
 }
 
+/* ========== 자막 편집 모드 ========== */
+.subtitle-edit-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 20px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-dim);
+    gap: 12px;
+}
+.ste-left { display: flex; align-items: center; gap: 10px; }
+.ste-right { display: flex; align-items: center; gap: 8px; }
+.ste-scope-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--bg-elevated); border: 1px solid var(--border-dim);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer;
+    color: var(--text-secondary); transition: 0.15s;
+}
+.ste-scope-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ste-scope-btn.active { background: rgba(124,92,62,0.08); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.ste-change-badge {
+    font-size: 11px; font-weight: 600;
+    background: rgba(217,119,6,0.08); color: #D97706;
+    border: 1px solid rgba(217,119,6,0.2);
+    border-radius: 20px; padding: 2px 10px;
+    display: none;
+}
+.ste-search {
+    font-family: 'Noto Sans KR', sans-serif; font-size: 12px;
+    background: var(--bg-elevated); border: 1px solid var(--border-dim);
+    border-radius: 6px; padding: 5px 10px; outline: none; width: 180px;
+    color: var(--text-primary); transition: border-color 0.15s;
+}
+.ste-search:focus { border-color: rgba(124,92,62,0.25); }
+.ste-search::placeholder { color: var(--text-muted); }
+.ste-save-btn {
+    font-family: 'Noto Sans KR', sans-serif; font-size: 13px; font-weight: 600;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; padding: 6px 18px; cursor: pointer;
+    box-shadow: 0 1px 4px rgba(124,92,62,0.25); transition: 0.15s;
+}
+.ste-save-btn:hover { background: #63492F; }
+.ste-save-btn:disabled { background: var(--text-muted); cursor: default; box-shadow: none; }
+.ste-save-status {
+    font-size: 12px; color: #16A34A; font-weight: 500;
+    opacity: 0; transition: opacity 0.3s;
+}
+
+/* 세그먼트 목록 */
+.ste-panel {
+    overflow-y: auto; padding: 16px 20px 80px;
+    scroll-behavior: smooth;
+    max-height: calc(100vh - 260px);
+}
+.ste-panel::-webkit-scrollbar { width: 5px; }
+.ste-panel::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
+
+.ste-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(229,226,220,0.5);
+    transition: background 0.12s;
+    border-radius: 6px;
+    margin-bottom: 2px;
+}
+.ste-row:hover { background: rgba(124,92,62,0.03); }
+.ste-row.active { background: rgba(124,92,62,0.1); }
+.ste-row.modified .ste-text {
+    border-color: rgba(217,119,6,0.3);
+    background: rgba(217,119,6,0.08);
+}
+.ste-row.highlight { background: rgba(22,163,74,0.06); }
+
+.ste-ts {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--text-muted); min-width: 52px; padding-top: 9px;
+    cursor: pointer; flex-shrink: 0; user-select: none;
+    transition: color 0.12s;
+}
+.ste-ts:hover { color: var(--accent); }
+.ste-row.active .ste-ts { color: var(--accent); font-weight: 600; }
+
+.ste-text {
+    flex: 1; font-size: 14px; line-height: 1.65;
+    color: var(--text-primary); background: transparent;
+    border: 1px solid transparent; border-radius: 6px;
+    padding: 6px 10px; resize: none; overflow: hidden;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: border-color 0.15s, background 0.15s;
+    min-height: 36px;
+}
+.ste-text:focus {
+    outline: none; border-color: rgba(124,92,62,0.25);
+    background: var(--bg-elevated);
+    box-shadow: 0 0 0 3px rgba(124,92,62,0.07);
+}
+
+.ste-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #D97706; margin-top: 13px; flex-shrink: 0;
+    opacity: 0; transition: opacity 0.15s;
+}
+.ste-row.modified .ste-dot { opacity: 1; }
+
 /* ========== 플로팅 자막 ========== */
 #subtitle-box {
     position: fixed;
@@ -884,6 +986,21 @@ body {
   </div>
   <div id="slide-nav"></div>
   </div>
+  <div id="subtitle-edit-area" style="display:none">
+    <div class="subtitle-edit-toolbar">
+      <div class="ste-left">
+        <button class="ste-scope-btn active" id="ste-scope-slide" onclick="_steSetScope('slide')">현재 슬라이드</button>
+        <button class="ste-scope-btn" id="ste-scope-all" onclick="_steSetScope('all')">전체</button>
+        <span class="ste-change-badge" id="ste-change-badge">0개 수정됨</span>
+      </div>
+      <div class="ste-right">
+        <input type="text" class="ste-search" id="ste-search" placeholder="세그먼트 검색…" autocomplete="off">
+        <span class="ste-save-status" id="ste-save-status">저장됨</span>
+        <button class="ste-save-btn" id="ste-save-btn" disabled onclick="_steSave()">저장</button>
+      </div>
+    </div>
+    <div class="ste-panel" id="ste-panel"></div>
+  </div>
   <div id="main-layout">
     <div id="slide-area">
       <div id="slide-container">
@@ -1134,6 +1251,28 @@ async function loadOverlayData() {
             }
         }
 
+        // 자막 수정본 적용
+        if (_scData.transcriptEdits) {
+            for (var segId in _scData.transcriptEdits) {
+                var idx = parseInt(segId);
+                if (idx < TRANSCRIPT.length) {
+                    TRANSCRIPT[idx].text = _scData.transcriptEdits[segId];
+                }
+            }
+            // 자막 편집 모드에서도 originals/segments 갱신
+            if (_subtitleMode) {
+                for (var segId2 in _scData.transcriptEdits) {
+                    var idx2 = parseInt(segId2);
+                    if (idx2 < _steSegments.length) {
+                        _steSegments[idx2].text = _scData.transcriptEdits[segId2];
+                        _steOriginals[idx2] = _scData.transcriptEdits[segId2];
+                    }
+                }
+                _steRender();
+                _steLsRestore();
+            }
+        }
+
         _scLoaded = true;
 
         // 관리자가 아니면 편집 모드 비활성화
@@ -1146,6 +1285,12 @@ async function loadOverlayData() {
             if (ce) ce.contentEditable = 'false';
             var te = document.getElementById('slide-title');
             if (te) te.contentEditable = 'false';
+            // 자막 편집 모드도 비활성화
+            _subtitleMode = false;
+            var steArea = document.getElementById('subtitle-edit-area');
+            if (steArea) steArea.style.display = 'none';
+            var slideArea = document.getElementById('slide-area');
+            if (slideArea) slideArea.style.display = '';
         }
 
         // 현재 슬라이드 새로고침 (메모 패널 포함)
@@ -1517,6 +1662,8 @@ function showSlide(index) {
     }
     // 오디오 맵 활성화
     updateAudioMap(index);
+    // 자막 편집: 슬라이드 전환 시 세그먼트 갱신
+    if (_subtitleMode && _steScope === 'slide') _steRender();
 
     // 편집 모드: contenteditable 유지
     if (_editMode) {
@@ -1552,6 +1699,7 @@ function onTimeUpdate() {
     seekBar.value = t;
     updateTimeDisplay();
     updateSubtitle(t);
+    if (_subtitleMode) _steSyncHighlight(t);
     if (!isAutoSync) return;
     syncSlideToTime(t);
 }
@@ -1590,7 +1738,7 @@ function skipTime(sec) {
 const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 document.addEventListener('keydown', (e) => {
     // 편집 모드에서는 키보드 단축키 비활성화
-    if (_editMode) return;
+    if (_editMode || _subtitleMode) return;
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
     if (e.code === 'ArrowLeft') { showSlide(currentSlide - 1); isAutoSync = false; }
     if (e.code === 'ArrowRight') { showSlide(currentSlide + 1); isAutoSync = false; }
@@ -1665,6 +1813,230 @@ document.querySelectorAll('#audio-map, #slide-nav').forEach(el => {
 init();
 buildOverlayIndex();
 highlightKeywordMatches();
+// ========== 자막 편집 모드 ==========
+let _subtitleMode = new URLSearchParams(location.search).has('subtitle');
+let _steSegments = [];
+let _steOriginals = [];
+let _steScope = 'slide';
+let _steCurrentIdx = -1;
+
+const STE_LS_KEY = 'subtitle_backup_' + SC_REPO;
+
+function initSubtitleEdit() {
+    if (!_subtitleMode) return;
+    _editMode = false;
+
+    _steSegments = TRANSCRIPT.map((t, i) => ({ id: i, start: t.start, end: t.end, text: t.text }));
+    _steOriginals = TRANSCRIPT.map(t => t.text);
+
+    var subBox = document.getElementById('subtitle-box');
+    if (subBox) subBox.style.display = 'none';
+    var subCtrl = document.getElementById('sub-controls');
+    if (subCtrl) subCtrl.style.display = 'none';
+
+    document.getElementById('subtitle-edit-area').style.display = 'block';
+    document.getElementById('slide-area').style.display = 'none';
+
+    var steSearchTimer;
+    document.getElementById('ste-search').addEventListener('input', function() {
+        clearTimeout(steSearchTimer);
+        steSearchTimer = setTimeout(function() { _steRender(); }, 150);
+    });
+
+    _steRender();
+}
+
+function _steSetScope(scope) {
+    _steScope = scope;
+    document.getElementById('ste-scope-slide').classList.toggle('active', scope === 'slide');
+    document.getElementById('ste-scope-all').classList.toggle('active', scope === 'all');
+    _steRender();
+}
+
+function _steGetVisibleSegments() {
+    if (_steScope === 'all') return _steSegments;
+    var slide = SLIDES[currentSlide];
+    if (!slide || !slide.hasAudio) return [];
+    return _steSegments.filter(function(s) {
+        return s.start < slide.end && s.end > slide.start;
+    });
+}
+
+function _steRender() {
+    var panel = document.getElementById('ste-panel');
+    panel.innerHTML = '';
+    var query = (document.getElementById('ste-search').value || '').trim().toLowerCase();
+    var segs = _steGetVisibleSegments();
+    var shown = 0;
+
+    segs.forEach(function(seg) {
+        if (query && !seg.text.toLowerCase().includes(query)) return;
+        shown++;
+
+        var row = document.createElement('div');
+        row.className = 'ste-row';
+        row.dataset.id = seg.id;
+        if (seg.text !== _steOriginals[seg.id]) row.classList.add('modified');
+
+        var ts = document.createElement('span');
+        ts.className = 'ste-ts';
+        ts.textContent = _steFmtTime(seg.start);
+        ts.title = _steFmtTime(seg.start) + ' ~ ' + _steFmtTime(seg.end);
+        ts.onclick = function() { audio.currentTime = seg.start; };
+
+        var ta = document.createElement('textarea');
+        ta.className = 'ste-text';
+        ta.value = seg.text;
+        ta.rows = 1;
+        _steAutoResize(ta);
+        ta.addEventListener('input', function() {
+            _steAutoResize(ta);
+            seg.text = ta.value;
+            TRANSCRIPT[seg.id].text = ta.value;
+            var modified = ta.value !== _steOriginals[seg.id];
+            row.classList.toggle('modified', modified);
+            _steUpdateBadge();
+            _steLsBackup();
+        });
+        ta.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                var next = panel.querySelector('.ste-row[data-id="' + (seg.id + 1) + '"] .ste-text');
+                if (next) { next.focus(); next.select(); }
+            }
+        });
+
+        var dot = document.createElement('div');
+        dot.className = 'ste-dot';
+
+        row.appendChild(ts);
+        row.appendChild(ta);
+        row.appendChild(dot);
+        panel.appendChild(row);
+    });
+
+    if (shown === 0) {
+        var empty = document.createElement('div');
+        empty.style.cssText = 'text-align:center;padding:40px 0;color:var(--text-muted);font-size:14px;';
+        empty.textContent = query ? '검색 결과 없음' : '이 슬라이드에 자막이 없습니다.';
+        panel.appendChild(empty);
+    }
+}
+
+function _steAutoResize(ta) {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+}
+
+function _steUpdateBadge() {
+    var n = _steSegments.filter(function(s) { return s.text !== _steOriginals[s.id]; }).length;
+    var badge = document.getElementById('ste-change-badge');
+    badge.style.display = n > 0 ? 'inline-block' : 'none';
+    badge.textContent = n + '개 수정됨';
+    document.getElementById('ste-save-btn').disabled = (n === 0);
+}
+
+function _steFmtTime(s) {
+    if (!s || !isFinite(s)) return '0:00';
+    var m = Math.floor(s / 60);
+    var sec = Math.floor(s % 60);
+    return m + ':' + String(sec).padStart(2, '0');
+}
+
+function _steSyncHighlight(t) {
+    if (!_subtitleMode) return;
+    var idx = findTranscriptIdx(t);
+    if (idx === _steCurrentIdx) return;
+    _steCurrentIdx = idx;
+    var panel = document.getElementById('ste-panel');
+    var prev = panel.querySelector('.ste-row.active');
+    if (prev) prev.classList.remove('active');
+    if (idx >= 0) {
+        var row = panel.querySelector('.ste-row[data-id="' + idx + '"]');
+        if (row) {
+            row.classList.add('active');
+            if (document.activeElement && document.activeElement.className !== 'ste-text') {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }
+}
+
+function _steLsBackup() {
+    try {
+        var changed = {};
+        _steSegments.forEach(function(s) {
+            if (s.text !== _steOriginals[s.id]) changed[s.id] = s.text;
+        });
+        if (Object.keys(changed).length > 0) {
+            localStorage.setItem(STE_LS_KEY, JSON.stringify({ ts: Date.now(), changes: changed }));
+        } else {
+            localStorage.removeItem(STE_LS_KEY);
+        }
+    } catch(e) {}
+}
+
+function _steLsRestore() {
+    try {
+        var raw = localStorage.getItem(STE_LS_KEY);
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        var ago = Math.round((Date.now() - data.ts) / 60000);
+        var count = Object.keys(data.changes).length;
+        if (count === 0) return;
+        if (!confirm(count + '개의 미저장 자막 수정분이 있습니다 (' + ago + '분 전).
+복원할까요?')) {
+            localStorage.removeItem(STE_LS_KEY);
+            return;
+        }
+        for (var idStr in data.changes) {
+            var id = parseInt(idStr);
+            if (id < _steSegments.length) {
+                _steSegments[id].text = data.changes[idStr];
+                TRANSCRIPT[id].text = data.changes[idStr];
+            }
+        }
+        _steRender();
+        _steUpdateBadge();
+    } catch(e) {}
+}
+
+function _steLsClear() {
+    try { localStorage.removeItem(STE_LS_KEY); } catch(e) {}
+}
+
+async function _steSave() {
+    var btn = document.getElementById('ste-save-btn');
+    btn.disabled = true;
+    btn.textContent = '저장 중…';
+    try {
+        var changed = _steSegments.filter(function(s) { return s.text !== _steOriginals[s.id]; });
+        var res = await fetch(
+            SC_API + '/api/transcript/' + encodeURIComponent(SC_REPO),
+            {
+                method: 'PUT',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ segments: changed.map(function(s) { return { id: s.id, text: s.text }; }) })
+            }
+        );
+        if (!res.ok) throw new Error('저장 실패');
+        _steSegments.forEach(function(s) { _steOriginals[s.id] = s.text; });
+        document.querySelectorAll('.ste-row.modified').forEach(function(r) { r.classList.remove('modified'); });
+        _steUpdateBadge();
+        btn.textContent = '저장';
+        _steLsClear();
+        var stat = document.getElementById('ste-save-status');
+        stat.style.opacity = '1';
+        setTimeout(function() { stat.style.opacity = '0'; }, 2500);
+    } catch (e) {
+        alert('자막 저장 실패: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '저장';
+    }
+}
+
+initSubtitleEdit();
 initEditMode();
 loadOverlayData();
 initSubtitleControls();
