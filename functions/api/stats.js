@@ -102,8 +102,10 @@ export async function onRequestGet(context) {
   // 빈 날짜도 0으로 초기화
   dates.forEach(d => { dailyMap[d] = 0; });
 
+  const adminEmail = (env.ADMIN_EMAIL || '').toLowerCase();
   allLogs.forEach(log => {
     const { email, repo, ts } = log;
+    if (email === adminEmail) return;
     const dateStr = new Date(ts).toISOString().slice(0, 10);
 
     // daily

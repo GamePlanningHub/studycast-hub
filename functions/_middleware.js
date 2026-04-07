@@ -38,7 +38,8 @@ export async function onRequest(context) {
     const url = new URL(context.request.url);
     const email = context.request.headers.get('Cf-Access-Authenticated-User-Email');
 
-    if (email && shouldLog(url.pathname)) {
+    const adminEmail = (context.env.ADMIN_EMAIL || '').toLowerCase();
+    if (email && email.toLowerCase() !== adminEmail && shouldLog(url.pathname)) {
       const repo = extractRepo(url.pathname);
       if (repo) {
         context.waitUntil(logVisit(context, email.toLowerCase(), repo));
