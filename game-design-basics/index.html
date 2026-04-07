@@ -1269,6 +1269,7 @@ let _scData = { edits: {}, memos: {}, isAdmin: false };
 let _scLoaded = false;
 let _editMode = new URLSearchParams(location.search).has('edit');
 let _subtitleMode = new URLSearchParams(location.search).has('subtitle');
+if (SC_REPO) { var _ml = document.getElementById('main-layout'); if (_ml) _ml.style.opacity = '0'; }
 
 async function loadOverlayData() {
     if (!SC_REPO) return;
@@ -1276,7 +1277,7 @@ async function loadOverlayData() {
         const res = await fetch(`${SC_API}/api/data/${encodeURIComponent(SC_REPO)}`, {
             credentials: 'include'
         });
-        if (!res.ok) { showSlide(currentSlide); return; }
+        if (!res.ok) { showSlide(currentSlide); var _ml = document.getElementById('main-layout'); if (_ml) { _ml.style.transition = 'opacity 0.15s'; _ml.style.opacity = ''; } return; }
         _scData = await res.json();
 
         // 수정본 적용: SLIDES content + title 교체
@@ -1331,9 +1332,11 @@ async function loadOverlayData() {
 
         // 현재 슬라이드 새로고침 (메모 패널 포함)
         showSlide(currentSlide);
+        var _ml = document.getElementById('main-layout'); if (_ml) { _ml.style.transition = 'opacity 0.15s'; _ml.style.opacity = ''; }
     } catch (e) {
         console.warn('SC API 연결 실패:', e);
         showSlide(currentSlide);
+        var _ml = document.getElementById('main-layout'); if (_ml) { _ml.style.transition = 'opacity 0.15s'; _ml.style.opacity = ''; }
     }
 }
 
