@@ -916,6 +916,7 @@ body {
 .edit-bar-label { font-weight: 600; }
 .edit-bar-actions { display: flex; gap: 8px; align-items: center; }
 .edit-save-status { font-size: 12px; color: #16A34A; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
+.edit-save-status.pending { opacity: 1; color: #E65100; }
 .edit-save-error { font-size: 12px; color: #DC2626; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
 .edit-bar button {
     padding: 6px 16px; border-radius: 6px; border: none;
@@ -1255,67 +1256,138 @@ function initEditMode() {
 }
 
 let _editDirty = false;
+let _editDirtySlides = {}; // slide.id -> true (미저장 상태 추적)
+let _editBaselines = {}; // slide.id -> {content, title} (취소 시 복원 기준)
 
-// content/title 변경 감지
+// content/title 변경 감지 — 편집 모드에선 슬라이드별 dirty 기록
 document.addEventListener('input', (e) => {
     if (e.target.id === 'slide-content' || e.target.closest('#slide-content') || e.target.id === 'slide-title') {
         _editDirty = true;
+        if (!_editMode) return;
+        var slide = SLIDES[currentSlide];
+        if (!slide) return;
+        if (!_editBaselines[slide.id]) {
+            _editBaselines[slide.id] = { content: slide.content, title: slide.title };
+        }
+        _editDirtySlides[slide.id] = true;
+        _updateEditBadge();
+    }
+});
+
+// 현재 슬라이드의 편집 내용을 SLIDES[]로 인메모리 캡처 (페이지 이동 시 호출)
+function _captureCurrentEdit() {
+    if (!_editMode) return;
+    var slide = SLIDES[currentSlide];
+    if (!slide || !_editDirtySlides[slide.id]) return;
+    var contentEl = document.getElementById('slide-content');
+    var titleEl = document.getElementById('slide-title');
+    if (!contentEl || !titleEl) return;
+    // 메모 패널은 content에 포함되지 않도록 clone에서 제거 (live DOM 건드리지 않음)
+    var clone = contentEl.cloneNode(true);
+    var memoInClone = clone.querySelector('.memo-panel');
+    if (memoInClone) memoInClone.remove();
+    slide.content = clone.innerHTML;
+    slide.title = titleEl.textContent;
+    // 목차 제목 갱신
+    var idxItem = document.querySelectorAll('#index-list .index-item')[currentSlide];
+    if (idxItem) { var t1 = idxItem.querySelector('.idx-title'); if (t1) t1.textContent = slide.title; }
+    var ovItem = document.querySelectorAll('#index-overlay-list .index-item')[currentSlide];
+    if (ovItem) { var t2 = ovItem.querySelector('.idx-title'); if (t2) t2.textContent = slide.title; }
+}
+
+function _updateEditBadge() {
+    var stat = document.getElementById('edit-save-status');
+    if (!stat) return;
+    var n = Object.keys(_editDirtySlides).length;
+    if (n > 0) {
+        stat.textContent = n + '개 미저장';
+        stat.classList.add('pending');
+    } else {
+        stat.classList.remove('pending');
+        stat.textContent = '저장됨';
+    }
+}
+
+// 탭 닫기 / 새로고침 시에만 네이티브 경고 (페이지 내 이동은 인메모리 유지)
+window.addEventListener('beforeunload', function(e) {
+    if (_editMode && Object.keys(_editDirtySlides).length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
     }
 });
 
 async function saveEdit() {
-    const contentEl = document.getElementById('slide-content');
-    const titleEl = document.getElementById('slide-title');
-    const slide = SLIDES[currentSlide];
-    // 메모 패널이 content 안에 들어가지 않도록 임시 제거 후 innerHTML 취득
-    var memoPanel = document.querySelector('.memo-panel');
-    if (memoPanel) memoPanel.remove();
-    const content = contentEl.innerHTML;
-    const title = titleEl.textContent;
-
-    try {
-        const res = await fetch(
-            SC_API + '/api/edit/' + encodeURIComponent(SC_REPO) + '/' + slide.id,
-            {
-                method: 'PUT',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: content, title: title }),
-            }
-        );
-        if (!res.ok) throw new Error('저장 실패');
-
-        // 로컬 데이터 갱신
-        slide._originalContent = slide._originalContent || slide.content;
-        slide._originalTitle = slide._originalTitle || slide.title;
-        slide.content = content;
-        slide.title = title;
-        _scData.edits[slide.id] = { content: content, title: title, updatedAt: new Date().toISOString() };
-        _editDirty = false;
-        // 목차 제목도 갱신
-        var idxItem = document.querySelectorAll('#index-list .index-item')[currentSlide];
-        if (idxItem) idxItem.querySelector('.idx-title').textContent = title;
-        var ovItem = document.querySelectorAll('#index-overlay-list .index-item')[currentSlide];
-        if (ovItem) ovItem.querySelector('.idx-title').textContent = title;
-        // 메모 패널 복원
-        buildMemoPanel();
-        // 저장됨 상태 표시
+    // 현재 슬라이드 편집분을 먼저 캡처
+    _captureCurrentEdit();
+    var dirtyIds = Object.keys(_editDirtySlides);
+    if (dirtyIds.length === 0) return;
+    var failed = [];
+    for (var i = 0; i < dirtyIds.length; i++) {
+        var slideId = dirtyIds[i];
+        var slide = SLIDES.find(function(s) { return s.id === slideId; });
+        if (!slide) { delete _editDirtySlides[slideId]; continue; }
+        try {
+            var res = await fetch(
+                SC_API + '/api/edit/' + encodeURIComponent(SC_REPO) + '/' + slide.id,
+                {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: slide.content, title: slide.title }),
+                }
+            );
+            if (!res.ok) throw new Error('저장 실패');
+            _scData.edits[slide.id] = { content: slide.content, title: slide.title, updatedAt: new Date().toISOString() };
+            delete _editDirtySlides[slide.id];
+            delete _editBaselines[slide.id];
+        } catch (e) {
+            failed.push(slide.id);
+        }
+    }
+    _editDirty = Object.keys(_editDirtySlides).length > 0;
+    _updateEditBadge();
+    if (failed.length === 0) {
         var stat = document.getElementById('edit-save-status');
-        if (stat) { stat.style.opacity = '1'; setTimeout(function() { stat.style.opacity = '0'; }, 2500); }
-    } catch (e) {
-        buildMemoPanel();
-        // 저장 실패 상태 표시
+        if (stat) {
+            stat.classList.remove('pending');
+            stat.textContent = '저장됨';
+            stat.style.opacity = '1';
+            setTimeout(function() { stat.style.opacity = ''; }, 2500);
+        }
+    } else {
         var err = document.getElementById('edit-save-error');
-        if (err) { err.style.opacity = '1'; setTimeout(function() { err.style.opacity = '0'; }, 3000); }
+        if (err) { err.style.opacity = '1'; setTimeout(function() { err.style.opacity = ''; }, 3000); }
     }
 }
 
 function cancelEdit() {
-    const slide = SLIDES[currentSlide];
-    var contentEl = document.getElementById('slide-content');
-    // 수정 전 상태로 복원
-    contentEl.innerHTML = slide.content;
+    // 모든 dirty 슬라이드를 베이스라인으로 복원
+    Object.keys(_editBaselines).forEach(function(slideId) {
+        var slide = SLIDES.find(function(s) { return s.id === slideId; });
+        if (!slide) return;
+        var base = _editBaselines[slideId];
+        slide.content = base.content;
+        slide.title = base.title;
+    });
+    _editDirtySlides = {};
+    _editBaselines = {};
     _editDirty = false;
+    _updateEditBadge();
+    // 현재 슬라이드 DOM·목차 복원
+    var slide = SLIDES[currentSlide];
+    if (slide) {
+        var contentEl = document.getElementById('slide-content');
+        var titleEl = document.getElementById('slide-title');
+        if (contentEl) contentEl.innerHTML = slide.content;
+        if (titleEl) titleEl.textContent = slide.title;
+    }
+    if (typeof _refreshTocTitles === 'function') _refreshTocTitles();
+    // 메모 패널 재생성
+    var oldMemo = document.querySelector('.memo-panel');
+    if (oldMemo) oldMemo.remove();
+    if (_scLoaded && slide && (_editMode || (_scData.memos && _scData.memos[slide.id]))) {
+        buildMemoPanel();
+    }
 }
 
 // ========== 메모 UI ==========
@@ -1560,10 +1632,9 @@ function updateAudioMap(currentIdx) {
 
 function showSlide(index) {
     if (index < 0 || index >= SLIDES.length) return;
-    // 편집 모드: 저장 안 된 변경 경고
-    if (_editMode && _editDirty) {
-        if (!confirm('저장하지 않은 수정이 있습니다. 이동하시겠습니까?')) return;
-        _editDirty = false;
+    // 편집 모드: 이전 슬라이드의 편집 내용을 인메모리 캡처 (자막편집과 동일 방식)
+    if (_editMode && currentSlide !== index) {
+        _captureCurrentEdit();
     }
     currentSlide = index;
     const slide = SLIDES[index];
