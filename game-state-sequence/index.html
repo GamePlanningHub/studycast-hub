@@ -1416,7 +1416,6 @@ function init() {
     buildNav();
     buildIndex();
     buildAudioMap();
-    // SC_REPO 있으면 loadOverlayData가 KV 적용 후 첫 렌더 (원본 flash 방지)
     if (!SC_REPO) showSlide(0);
     audio.addEventListener('timeupdate', () => {
         if (_rafPending) return;
@@ -2155,7 +2154,6 @@ function initSubtitleControls() {
     updatePosIcon();
 }
 // showSlide/currentSlide를 모바일 FAB에서 접근 가능하도록 전역 노출
-// 전역 loadOverlayData에서 호출하는 목차 갱신 브릿지
 window._refreshTocTitles = function() {
     SLIDES.forEach((s, i) => {
         if (_indexItems[i]) _indexItems[i].querySelector('.idx-title').textContent = s.title;
