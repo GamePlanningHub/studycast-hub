@@ -1188,7 +1188,7 @@ async function loadOverlayData() {
         const res = await fetch(`${SC_API}/api/data/${encodeURIComponent(SC_REPO)}`, {
             credentials: 'include'
         });
-        if (!res.ok) return;
+        if (!res.ok) { showSlide(currentSlide); return; }
         _scData = await res.json();
 
         // 수정본 적용: SLIDES content + title 교체
@@ -1238,10 +1238,14 @@ async function loadOverlayData() {
             if (slideArea) slideArea.style.display = '';
         }
 
+        // 목차 제목 갱신 (IIFE 브릿지)
+        if (typeof _refreshTocTitles === 'function') _refreshTocTitles();
+
         // 현재 슬라이드 새로고침 (메모 패널 포함)
         showSlide(currentSlide);
     } catch (e) {
         console.warn('SC API 연결 실패:', e);
+        showSlide(currentSlide);
     }
 }
 
@@ -1436,7 +1440,8 @@ function init() {
     buildNav();
     buildIndex();
     buildAudioMap();
-    showSlide(0);
+    // SC_REPO 있으면 loadOverlayData가 KV 적용 후 첫 렌더 (원본 flash 방지)
+    if (!SC_REPO) showSlide(0);
     audio.addEventListener('timeupdate', () => {
         if (_rafPending) return;
         _rafPending = true;
@@ -2174,6 +2179,13 @@ function initSubtitleControls() {
     updatePosIcon();
 }
 // showSlide/currentSlide를 모바일 FAB에서 접근 가능하도록 전역 노출
+// 전역 loadOverlayData에서 호출하는 목차 갱신 브릿지
+window._refreshTocTitles = function() {
+    SLIDES.forEach((s, i) => {
+        if (_indexItems[i]) _indexItems[i].querySelector('.idx-title').textContent = s.title;
+        if (_overlayItems[i]) _overlayItems[i].querySelector('.idx-title').textContent = s.title;
+    });
+};
 window.showSlide = showSlide;
 window.openOverlay = openOverlay;
 window.closeOverlay = closeOverlay;
