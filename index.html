@@ -485,6 +485,7 @@ footer a:hover { opacity: 1; }
 <script>
 const MANIFEST = 'manifest.json';
 const SEARCH_INDEX = 'search-index.json';
+const SEARCH_OVERLAY = '/api/searchidx';
 
 // 교안 텍스트 캐시: { folder: "띄어쓰기 제거된 텍스트" }
 const contentCache = {};
@@ -526,6 +527,7 @@ async function load() {
 }
 
 // 검색 인덱스 로드 (교안 텍스트, 띄어쓰기 제거 후 캐싱)
+// 정적 search-index.json + KV 편집 오버레이(/api/searchidx) 머지
 async function loadSearchIndex() {
     const searchStatus = document.getElementById('search-status');
     searchStatus.textContent = '검색 인덱스 로딩 중...';
@@ -541,6 +543,21 @@ async function loadSearchIndex() {
         searchStatus.textContent = '';
     } catch {
         searchStatus.textContent = '검색 인덱스 로드 실패';
+        return;
+    }
+
+    // KV 편집 오버레이를 정적 인덱스 위에 append (실패해도 검색은 동작)
+    try {
+        const res = await fetch(SEARCH_OVERLAY, { cache: 'no-store' });
+        if (!res.ok) return;
+        const overlay = await res.json();
+        for (const [folder, text] of Object.entries(overlay)) {
+            if (typeof text !== 'string' || !text) continue;
+            const norm = text.replace(/\s/g, '').toLowerCase();
+            contentCache[folder] = (contentCache[folder] || '') + norm;
+        }
+    } catch {
+        // 오버레이 실패는 조용히 무시 — 정적 인덱스만으로 검색 가능
     }
 }
 
