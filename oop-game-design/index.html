@@ -945,10 +945,11 @@ body {
 .memo-body { display: none; }
 .memo-panel.open .memo-body { display: block; }
 .memo-text {
-    width: 100%; min-height: 60px; padding: 10px; border: 1px solid #BBDEFB;
+    width: 100%; min-height: 40px; padding: 10px; border: 1px solid #BBDEFB;
     border-radius: 6px; font-size: 13px; line-height: 1.6;
-    background: #fff; color: var(--text-secondary); resize: vertical;
-    font-family: inherit; box-sizing: border-box;
+    background: #fff; color: var(--text-secondary); resize: none;
+    overflow: hidden; font-family: inherit; box-sizing: border-box;
+    display: block;
 }
 .memo-text:focus { outline: none; border-color: #42A5F5; }
 .memo-text[readonly] { background: #FAFAFA; cursor: default; }
@@ -1439,24 +1440,41 @@ function buildMemoPanel() {
         '<div class="memo-saved" id="memo-saved">저장됨</div>' +
         '</div>';
 
-    // 헤더 클릭 시 패널 열기/닫기
+    // textarea 내용에 맞게 높이 자동 조절
+    function _autoResizeMemo(el) {
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    // 헤더 클릭 시 패널 열기/닫기 (열릴 때 높이 재계산 — display:none 상태에서는 scrollHeight=0)
     panel.querySelector('.memo-header').addEventListener('click', function() {
         panel.classList.toggle('open');
+        if (panel.classList.contains('open')) {
+            _autoResizeMemo(panel.querySelector('.memo-text'));
+        }
     });
 
     // slide-content 다음 형제로 삽입
     var contentEl = document.getElementById('slide-content');
     contentEl.parentNode.insertBefore(panel, contentEl.nextSibling);
 
-    // 편집 가능할 때만 자동 저장
-    if (canEdit) {
-        var textarea = panel.querySelector('.memo-text');
-        textarea.addEventListener('input', function() {
+    var textarea = panel.querySelector('.memo-text');
+
+    // 초기 렌더 시(패널이 열려있으면) 높이 자동 조절
+    if (panel.classList.contains('open')) {
+        _autoResizeMemo(textarea);
+    }
+
+    // 입력 시 높이 자동 조절 + 편집 가능할 때만 자동 저장
+    textarea.addEventListener('input', function() {
+        _autoResizeMemo(textarea);
+        if (canEdit) {
             var sid = slide.id;
             clearTimeout(_memoTimers[sid]);
             _memoTimers[sid] = setTimeout(function() { saveMemo(sid, textarea.value); }, 1000);
-        });
-    }
+        }
+    });
 }
 
 async function saveMemo(sectionId, text) {
