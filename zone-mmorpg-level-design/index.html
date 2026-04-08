@@ -1822,6 +1822,11 @@ function showSlide(index) {
     }
     // 오디오 맵 활성화
     updateAudioMap(index);
+    // 모바일 FAB: 첫/끝 슬라이드에서 이동 불가 버튼 숨김 (레이아웃 유지)
+    var _navPrev = document.getElementById('nav-prev');
+    var _navNext = document.getElementById('nav-next');
+    if (_navPrev) _navPrev.style.visibility = (index === 0) ? 'hidden' : '';
+    if (_navNext) _navNext.style.visibility = (index === SLIDES.length - 1) ? 'hidden' : '';
 
     // 편집 모드: contenteditable 유지
     if (_editMode) {
