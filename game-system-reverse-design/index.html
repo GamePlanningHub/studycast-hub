@@ -1306,6 +1306,8 @@ async function loadOverlayData() {
 
         // 목차 제목 갱신 (IIFE 브릿지)
         if (typeof _refreshTocTitles === 'function') _refreshTocTitles();
+        // 키워드 검색 하이라이트 재계산 (편집본 텍스트까지 매칭되도록)
+        if (typeof _rehighlightKeywordMatches === 'function') _rehighlightKeywordMatches();
 
         // 현재 슬라이드 새로고침 (메모 패널 포함)
         showSlide(currentSlide);
@@ -2367,6 +2369,12 @@ window._refreshTocTitles = function() {
         if (_indexItems[i]) _indexItems[i].querySelector('.idx-title').textContent = s.title;
         if (_overlayItems[i]) _overlayItems[i].querySelector('.idx-title').textContent = s.title;
     });
+};
+// loadOverlayData가 SLIDES를 KV 편집본으로 교체한 뒤 키워드 하이라이트 재계산
+window._rehighlightKeywordMatches = function() {
+    _indexItems.forEach(it => it && it.classList.remove('keyword-match'));
+    _overlayItems.forEach(it => it && it.classList.remove('keyword-match'));
+    highlightKeywordMatches();
 };
 window.showSlide = showSlide;
 window.openOverlay = openOverlay;
