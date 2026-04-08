@@ -1167,7 +1167,7 @@ const SLIDES = [
   {
     "id": "P16",
     "title": "도시 레벨 디자인의 포인트",
-    "content": "<div class=\"slide-card\"><div class=\"card-heading\">시야 제약 설계</div><div class=\"card-desc\">지역 간 연결 지점에서 반대편 공간이 시야에 들어오지 않도록 지형, 건물, 골목 구조를 활용해 시야를 자연스럽게 차단한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">유저 동선 분산</div><div class=\"card-desc\">특정 구역에 유저가 과도하게 밀집되지 않도록 기능 건물의 배치와 동선을 전략적으로 설계한다. 서버 부하와 플레이 경험 모두에 영향을 미친다.</div></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2.26C10.19 13.47 9 11.38 9 9a7 7 0 0 1 3-5.74z\"/></svg></div><div class=\"note-content\"><strong>핵심 원칙</strong>: 한 화면에 렌더링 되는 그래픽 양을 최소화하는 것이 최우선이다.<br>특히 자유 시점 카메라가 허용되는 게임일수록 이 원칙은 더움 엄격하게 적용되어야 한다.</div></div>",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">시야 제약 설계</div><div class=\"card-desc\">지역 간 연결 지점에서 반대편 공간이 시야에 들어오지 않도록 지형, 건물, 골목 구조를 활용해 시야를 자연스럽게 차단한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">유저 동선 분산</div><div class=\"card-desc\">특정 구역에 유저가 과도하게 밀집되지 않도록 기능 건물의 배치와 동선을 전략적으로 설계한다. 서버 부하와 플레이 경험 모두에 영향을 미친다.</div></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg></div><div class=\"note-content\"><strong>핵심 원칙</strong>: 한 화면에 렌더링 되는 그래픽 양을 최소화하는 것이 최우선이다.<br>특히 자유 시점 카메라가 허용되는 게임일수록 이 원칙은 더움 엄격하게 적용되어야 한다.</div></div>",
     "hasAudio": true,
     "start": 433.0,
     "end": 480.0
@@ -2276,7 +2276,7 @@ function initSubtitleControls() {
     // 위치 전환 버튼: bottom↔free
     const posIcon = document.getElementById('sub-pos-icon');
     function updatePosIcon() {
-        const svgMove = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M5 5l-3 3 3 3M19 5l3 3-3 3M5 19l-3-3 3-3M19 19l3-3-3-3"/></svg>';
+        const svgMove = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3"/></svg>';
         const svgVert = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 5l7-3 7 3M5 19l7 3 7-3"/></svg>';
         const svgDock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M3 3h18v7H3z" opacity="0.3"/></svg>';
         if (isMobile) { posIcon.innerHTML = posMode === 'free' ? svgVert : svgDock; }
