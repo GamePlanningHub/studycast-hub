@@ -1820,8 +1820,37 @@ function skipTime(sec) {
 
 const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 document.addEventListener('keydown', (e) => {
-    // 편집 모드에서는 키보드 단축키 비활성화
-    if (_editMode || _subtitleMode) return;
+    // 자막 편집 모드는 모든 단축키 비활성화
+    if (_subtitleMode) return;
+    // 교안 편집 모드: Shift/Ctrl 조합만 플레이어·네비·저장으로 인터셉트, 일반 키는 편집 기본 동작(커서 이동·공백 입력) 유지
+    if (_editMode) {
+        // Ctrl/Cmd+S → 저장 (브라우저 기본 저장 다이얼로그 차단)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            if (typeof saveEdit === 'function') saveEdit();
+            return;
+        }
+        // Shift+Space → 오디오 재생/정지 토글
+        if (e.shiftKey && e.code === 'Space') {
+            e.preventDefault();
+            togglePlay();
+            return;
+        }
+        // Shift+←/→ → 이전/다음 슬라이드 (인메모리 편집분은 기존 _captureCurrentEdit 경로로 자동 보존)
+        if (e.shiftKey && e.code === 'ArrowLeft') {
+            e.preventDefault();
+            showSlide(currentSlide - 1);
+            isAutoSync = false;
+            return;
+        }
+        if (e.shiftKey && e.code === 'ArrowRight') {
+            e.preventDefault();
+            showSlide(currentSlide + 1);
+            isAutoSync = false;
+            return;
+        }
+        return;
+    }
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
     if (e.code === 'ArrowLeft') { showSlide(currentSlide - 1); isAutoSync = false; }
     if (e.code === 'ArrowRight') { showSlide(currentSlide + 1); isAutoSync = false; }
