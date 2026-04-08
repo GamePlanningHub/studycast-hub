@@ -336,7 +336,6 @@ body {
     background: var(--accent);
     opacity: 0.6;
 }
-.note-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
 .note-content {
     color: var(--text-secondary); font-size: 13.5px;
     line-height: 1.8; font-weight: 400;
@@ -1055,7 +1054,7 @@ const SLIDES = [
   {
     "id": "P2",
     "title": "컨텐츠 순환 구조",
-    "content": "<div class=\"slide-text\">핵심 컨텐츠와 파생 컨텐츠를 통해 게임 내 각종 자원과 소모성 컨텐츠의 순환 구조를 설계한다. 유저가 자신의 목적을 달성하기 위해 사용하는 모든 게임 요소가 포함된다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">레벨별로 가지게 될 재화(컨텐츠 소모력)을 고려해서 만들어야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex</div><div class=\"card-desc\">: 10레벨, 20레벨에는 플레이어에게 재료나 재화가 얼마나 있을것인가? → 10레벨까지는 평균적으로 몬스터를 100마리 잡을 것이다. (몬스터당 골드 드롭 기댓값 20G*100) → 통계를 확인해보니 20레벨에는 약 5000골드의 재화를 가지게 된다.</div></div>\n<div class=\"slide-text\">*엑셀 등을 사용하여 컨텐츠 소모의 수치화가 중요하다!</div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg></div><div class=\"note-content\">컨텐츠 순환 구조의 디자인은 유저의 컨텐츠 사용 방식, 소모 속도, 밸런싱을 결정하기 때문에 컨텐츠 기획에서 가장 중요한 작업이다.</div></div>",
+    "content": "<div class=\"slide-text\">핵심 컨텐츠와 파생 컨텐츠를 통해 게임 내 각종 자원과 소모성 컨텐츠의 순환 구조를 설계한다. 유저가 자신의 목적을 달성하기 위해 사용하는 모든 게임 요소가 포함된다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">레벨별로 가지게 될 재화(컨텐츠 소모력)을 고려해서 만들어야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex</div><div class=\"card-desc\">: 10레벨, 20레벨에는 플레이어에게 재료나 재화가 얼마나 있을것인가? → 10레벨까지는 평균적으로 몬스터를 100마리 잡을 것이다. (몬스터당 골드 드롭 기댓값 20G*100) → 통계를 확인해보니 20레벨에는 약 5000골드의 재화를 가지게 된다.</div></div>\n<div class=\"slide-text\">*엑셀 등을 사용하여 컨텐츠 소모의 수치화가 중요하다!</div>\n<div class=\"slide-note\"><div class=\"note-content\">컨텐츠 순환 구조의 디자인은 유저의 컨텐츠 사용 방식, 소모 속도, 밸런싱을 결정하기 때문에 컨텐츠 기획에서 가장 중요한 작업이다.</div></div>",
     "hasAudio": true,
     "start": 110.5,
     "end": 202.3
@@ -1071,7 +1070,7 @@ const SLIDES = [
   {
     "id": "P4",
     "title": "예시 설명",
-    "content": "<div class=\"slide-card\"><div class=\"card-heading\">나의 목표는 광렙!</div><div class=\"card-desc\">→ 유저가 가장 중요하게 생각하는 가치</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">여우굴</div><div class=\"card-desc\">: 그럼 여기가 가장 적당하겠구나? → 가장 효율적인 플레이를 위해 소모되는 컨텐츠</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">산적 성채</div><div class=\"card-desc\">: 산적은 선공몹이라 잡기 힘들어!</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">뒷동산</div><div class=\"card-desc\">: 여기는 몬스터 젠이 너무 적어! → <strong>버려지는 컨텐츠</strong></div></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg></div><div class=\"note-content\"><strong>개선 방법</strong><br><strong>여우굴</strong> : 여기는 경험치를 획득하기 좋지만 물약 소모가 너무 심해<br>→ 버려지는 컨텐츠를 살리기 위해 가장 효율적인 컨텐츠 수정<br><strong>산적 산채</strong> : 나는 전사라서 선공형 몬스터는 힘들지만 법사를 키우는 친구는 몰이사냥이 가능하다고 산채를 선호해<br><strong>뒷동산</strong> : 여기는 몬스터 수가 너무 적지만 광렙을 위해서는 채집을 해야해<br>→ 버려지는 컨텐츠 재활용</div></div>",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">나의 목표는 광렙!</div><div class=\"card-desc\">→ 유저가 가장 중요하게 생각하는 가치</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">여우굴</div><div class=\"card-desc\">: 그럼 여기가 가장 적당하겠구나? → 가장 효율적인 플레이를 위해 소모되는 컨텐츠</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">산적 성채</div><div class=\"card-desc\">: 산적은 선공몹이라 잡기 힘들어!</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">뒷동산</div><div class=\"card-desc\">: 여기는 몬스터 젠이 너무 적어! → <strong>버려지는 컨텐츠</strong></div></div>\n<div class=\"slide-note\"><div class=\"note-content\"><strong>개선 방법</strong><br><strong>여우굴</strong> : 여기는 경험치를 획득하기 좋지만 물약 소모가 너무 심해<br>→ 버려지는 컨텐츠를 살리기 위해 가장 효율적인 컨텐츠 수정<br><strong>산적 산채</strong> : 나는 전사라서 선공형 몬스터는 힘들지만 법사를 키우는 친구는 몰이사냥이 가능하다고 산채를 선호해<br><strong>뒷동산</strong> : 여기는 몬스터 수가 너무 적지만 광렙을 위해서는 채집을 해야해<br>→ 버려지는 컨텐츠 재활용</div></div>",
     "hasAudio": true,
     "start": 257.8,
     "end": 366.9
@@ -1087,7 +1086,7 @@ const SLIDES = [
   {
     "id": "P6",
     "title": "게임 플레이 컨텐츠 순환 구조 설계",
-    "content": "<div class=\"slide-card\"><div class=\"card-heading\">레벨 구간의 3단계</div></div>\n<div class=\"slide-text\">레벨은 유저의 게임 진행도와 경험에 따라 크게 세 가지 단계로 구분된다. 각 단계마다 유저의 목표와 게임 플레이 방식이 달라진다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">🌱게임 시작~초반 레벨</div><div class=\"card-desc\">게임에 재미를 붙이고 게임의 유저가 되어가는 온보딩 단계 → 가장 재밌고 활발한 순환!</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">🌳중반 레벨</div><div class=\"card-desc\">최고 레벨을 달성하기 위해 노력하며 게임에 몰입하는 성장 단계</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">🏆후반 레벨</div><div class=\"card-desc\">최고 레벨을 달성하거나 모든 컨텐츠 타입을 체험한 마스터 단계</div></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg></div><div class=\"note-content\">각 과정은 긍정적 감정, 관계성, 의미, 업적 달성의 의미가 내포되어야 한다.</div></div>",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">레벨 구간의 3단계</div></div>\n<div class=\"slide-text\">레벨은 유저의 게임 진행도와 경험에 따라 크게 세 가지 단계로 구분된다. 각 단계마다 유저의 목표와 게임 플레이 방식이 달라진다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">🌱게임 시작~초반 레벨</div><div class=\"card-desc\">게임에 재미를 붙이고 게임의 유저가 되어가는 온보딩 단계 → 가장 재밌고 활발한 순환!</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">🌳중반 레벨</div><div class=\"card-desc\">최고 레벨을 달성하기 위해 노력하며 게임에 몰입하는 성장 단계</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">🏆후반 레벨</div><div class=\"card-desc\">최고 레벨을 달성하거나 모든 컨텐츠 타입을 체험한 마스터 단계</div></div>\n<div class=\"slide-note\"><div class=\"note-content\">각 과정은 긍정적 감정, 관계성, 의미, 업적 달성의 의미가 내포되어야 한다.</div></div>",
     "hasAudio": true,
     "start": 383.4,
     "end": 435.6
@@ -1191,7 +1190,7 @@ const SLIDES = [
   {
     "id": "P19",
     "title": "컨텐츠와 리소스",
-    "content": "<div class=\"slide-card\"><div class=\"card-heading\">참치김밥, 치즈김밥을 만드는 가게</div><div class=\"card-desc\">참치김밥, 치즈김밥 = <strong>컨텐츠</strong> 밥, 김, 참치, 치즈 = <strong>리소스</strong></div></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg></div><div class=\"note-content\"><strong>리소스의 정의</strong><br>리소스란 컨텐츠를 구성하는 파일 단위의 구성 요소이다. (파일로 되어있으면 모두 리소스!)<br>*아이템 아이콘 이미지, 3D 메쉬, 텍스처 등은 리소스지만 아이템 가격, 등급 등은 컨텐츠의 속성이다.</div></div>",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">참치김밥, 치즈김밥을 만드는 가게</div><div class=\"card-desc\">참치김밥, 치즈김밥 = <strong>컨텐츠</strong> 밥, 김, 참치, 치즈 = <strong>리소스</strong></div></div>\n<div class=\"slide-note\"><div class=\"note-content\"><strong>리소스의 정의</strong><br>리소스란 컨텐츠를 구성하는 파일 단위의 구성 요소이다. (파일로 되어있으면 모두 리소스!)<br>*아이템 아이콘 이미지, 3D 메쉬, 텍스처 등은 리소스지만 아이템 가격, 등급 등은 컨텐츠의 속성이다.</div></div>",
     "hasAudio": true,
     "start": 1003.2,
     "end": 1048.7

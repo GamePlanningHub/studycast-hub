@@ -336,7 +336,6 @@ body {
     background: var(--accent);
     opacity: 0.6;
 }
-.note-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
 .note-content {
     color: var(--text-secondary); font-size: 13.5px;
     line-height: 1.8; font-weight: 400;
@@ -1063,7 +1062,7 @@ const SLIDES = [
   {
     "id": "P3",
     "title": "레이어",
-    "content": "<div class=\"slide-text\">2D 이미지를 투명한 필름처럼 여러 겹으로 쌓아올린 구조</div>\n<div class=\"slide-card\"><div class=\"card-heading\">레이어  구성의 목적</div></div>\n<ul class=\"slide-points\"><li>UI 요소의 독립적 표시</li><li>게임 세계의 깊이감 구현</li><li>이펙트와 특수 효과 분리</li><li>이미지 재활용으로 용량 절약</li></ul>\n<div class=\"slide-text\">메모리의 특성 : 로드 속도 매우 빠름 / 용량이 채워질수록 속도가 느려짐<br>→ 슈퍼마리오의 리소스 우려먹기는 단순 용량만을 위해서가 아닌 <strong>당시의 램 처리력을 커버하기 위해!</strong></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg></div><div class=\"note-content\">일반적으로는 해당 프로그램 또는 화면 전체를 화면의 최대 주사율로 갱신하지만 프로그래밍을 통해 갱신이 가능하다.</div></div>",
+    "content": "<div class=\"slide-text\">2D 이미지를 투명한 필름처럼 여러 겹으로 쌓아올린 구조</div>\n<div class=\"slide-card\"><div class=\"card-heading\">레이어  구성의 목적</div></div>\n<ul class=\"slide-points\"><li>UI 요소의 독립적 표시</li><li>게임 세계의 깊이감 구현</li><li>이펙트와 특수 효과 분리</li><li>이미지 재활용으로 용량 절약</li></ul>\n<div class=\"slide-text\">메모리의 특성 : 로드 속도 매우 빠름 / 용량이 채워질수록 속도가 느려짐<br>→ 슈퍼마리오의 리소스 우려먹기는 단순 용량만을 위해서가 아닌 <strong>당시의 램 처리력을 커버하기 위해!</strong></div>\n<div class=\"slide-note\"><div class=\"note-content\">일반적으로는 해당 프로그램 또는 화면 전체를 화면의 최대 주사율로 갱신하지만 프로그래밍을 통해 갱신이 가능하다.</div></div>",
     "hasAudio": true,
     "start": 245.0,
     "end": 403.0
@@ -1087,7 +1086,7 @@ const SLIDES = [
   {
     "id": "P6",
     "title": "동적으로 변화하는 레이어",
-    "content": "<div class=\"slide-card\"><div class=\"card-heading\">생성과 소멸</div><div class=\"card-desc\">특정 상황에서만 나타나거나 사라지는 레이어가 있다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">순서 변경</div><div class=\"card-desc\">캐릭터의 위치에 따라 앞뒤 순서가 동적으로 바뀐다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시각 효과</div><div class=\"card-desc\">반투명, 흑백 등의 효과가 상황에 따라 적용된다. → 두개의 이미지의 RGB 값을 상호 연산하여 출력!</div></div>\n<div class=\"slide-note\"><div class=\"note-icon\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg></div><div class=\"note-content\">‘<strong>동적</strong>’ 의 프로그래밍상 개념<br><strong>CPU</strong> : 중앙 처리 장치 (제일 빠름)<br><strong>RAM</strong> : 랜덤 액세스 메모리 (두번째로 빠름)<br><strong>SSD</strong> : 솔리드 스테이트 드라이브 / HDD : 하드 디스크 드라이브 (저장 장치)<br><strong>GPU</strong> : 그래픽 처리 장치<br>SSD에서 CPU로 직접 떠온다면 연산에 필요한 파일을 로드하는 속도가 매우 느리다.<br>따라서 프로그램을 실행할 때 필요한 파일을 SSD에서 램에 미리 로드한 후 연산한다.<br><strong>Q</strong>: 그럼 SSD 대신 커다란 램에 전부 저장하면 되지 않나요?<br><strong>A</strong>: 램은 전원이 들어와 있을 때만 저장되고 전원이 끊어지면 데이터가 모두 지워지는 ‘휘발성 메모리’라서 그렇게 하면 큰일난다.<br>동적 → 프로그램에서 실시간으로 램의 공간을 할당한다는 용어로 사용됨 → 실시간<br><strong>동적 변화 레이어</strong> → 프레임의 순서가 실시간으로 변화하는 경우 = 게임 중에 변화하는 레이어</div></div>",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">생성과 소멸</div><div class=\"card-desc\">특정 상황에서만 나타나거나 사라지는 레이어가 있다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">순서 변경</div><div class=\"card-desc\">캐릭터의 위치에 따라 앞뒤 순서가 동적으로 바뀐다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시각 효과</div><div class=\"card-desc\">반투명, 흑백 등의 효과가 상황에 따라 적용된다. → 두개의 이미지의 RGB 값을 상호 연산하여 출력!</div></div>\n<div class=\"slide-note\"><div class=\"note-content\">‘<strong>동적</strong>’ 의 프로그래밍상 개념<br><strong>CPU</strong> : 중앙 처리 장치 (제일 빠름)<br><strong>RAM</strong> : 랜덤 액세스 메모리 (두번째로 빠름)<br><strong>SSD</strong> : 솔리드 스테이트 드라이브 / HDD : 하드 디스크 드라이브 (저장 장치)<br><strong>GPU</strong> : 그래픽 처리 장치<br>SSD에서 CPU로 직접 떠온다면 연산에 필요한 파일을 로드하는 속도가 매우 느리다.<br>따라서 프로그램을 실행할 때 필요한 파일을 SSD에서 램에 미리 로드한 후 연산한다.<br><strong>Q</strong>: 그럼 SSD 대신 커다란 램에 전부 저장하면 되지 않나요?<br><strong>A</strong>: 램은 전원이 들어와 있을 때만 저장되고 전원이 끊어지면 데이터가 모두 지워지는 ‘휘발성 메모리’라서 그렇게 하면 큰일난다.<br>동적 → 프로그램에서 실시간으로 램의 공간을 할당한다는 용어로 사용됨 → 실시간<br><strong>동적 변화 레이어</strong> → 프레임의 순서가 실시간으로 변화하는 경우 = 게임 중에 변화하는 레이어</div></div>",
     "hasAudio": true,
     "start": 403.0,
     "end": 566.0
