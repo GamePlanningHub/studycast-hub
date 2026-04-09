@@ -585,7 +585,8 @@ function renderCards(entries, matchCounts, keyword) {
         card.className = 'card';
         const editParam = sessionStorage.getItem('sc-edit-mode') === '1' ? 'edit=1' : '';
         const subtitleParam = sessionStorage.getItem('sc-subtitle-mode') === '1' ? 'subtitle=1' : '';
-        const params = [editParam, subtitleParam].filter(Boolean).join('&');
+        const mappingParam = sessionStorage.getItem('sc-mapping-mode') === '1' ? 'mapping=1' : '';
+        const params = [editParam, subtitleParam, mappingParam].filter(Boolean).join('&');
         const paramStr = params ? '?' + params : '';
         card.href = keyword
             ? `/${entry.folder}/?q=${encodeURIComponent(keyword)}${params ? '&' + params : ''}`
