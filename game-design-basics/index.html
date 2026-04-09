@@ -925,6 +925,36 @@ body {
 .btn-save:hover { background: #F57F17; }
 .btn-cancel { background: #fff; color: #888; border: 1px solid #ddd; }
 .btn-cancel:hover { background: #f5f5f5; }
+/* 매핑 편집 컨트롤 바 (교안 편집 모드 전용) */
+.mapping-bar {
+    display: none;
+    margin: 12px 0;
+    padding: 10px 14px;
+    background: #fff8e1;
+    border: 1px solid #ffca28;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #5d4037;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.mapping-bar.active { display: flex; }
+.mapping-bar .mb-icon { flex-shrink: 0; opacity: 0.7; }
+.mapping-bar .mb-label { font-weight: 600; }
+.mapping-bar .mb-range { font-family: monospace; color: #6d4c41; }
+.mapping-bar .mb-range.empty { color: #bf360c; font-style: italic; }
+.mapping-bar button {
+    padding: 6px 12px;
+    border: 1px solid #ffb300;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #5d4037;
+}
+.mapping-bar button:hover:not(:disabled) { background: #fff3e0; }
+.mapping-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
 #slide-content[contenteditable="true"] {
     outline: 2px dashed rgba(249,168,37,0.4);
     outline-offset: 4px; border-radius: 4px;
@@ -1010,6 +1040,20 @@ body {
           <span id="slide-badge"></span>
         </div>
         <h1 id="slide-title"></h1>
+        <div id="mapping-bar" class="mapping-bar" style="display:none">
+          <svg class="mb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 10v3"/>
+            <path d="M6 6v11"/>
+            <path d="M10 3v18"/>
+            <path d="M14 8v7"/>
+            <path d="M18 5v13"/>
+            <path d="M22 10v3"/>
+          </svg>
+          <span class="mb-label" id="mb-section-id">—</span>
+          <span class="mb-range" id="mb-range">—</span>
+          <button class="mb-set-start" id="mb-set-start">시작을 현재 시점으로</button>
+          <button class="mb-set-end" id="mb-set-end">끝을 현재 시점으로</button>
+        </div>
         <div id="slide-content"></div>
       </div>
     </div>
@@ -1270,7 +1314,12 @@ let _scData = { edits: {}, memos: {}, isAdmin: false };
 let _scLoaded = false;
 let _editMode = new URLSearchParams(location.search).has('edit');
 let _subtitleMode = new URLSearchParams(location.search).has('subtitle');
-if (SC_REPO) { var _ml = document.getElementById('main-layout'); if (_ml) _ml.style.opacity = '0'; }
+let _mappingMode = new URLSearchParams(location.search).has('mapping');
+
+// 원본 매핑 스냅샷 (DELETE 시 복원용). SLIDES 선언 직후 단 1회 캡처.
+const _scOriginalMapping = SLIDES.map(function(s) {
+    return { start: s.start, end: s.end, hasAudio: s.hasAudio };
+});
 
 async function loadOverlayData() {
     if (!SC_REPO) return;
@@ -1278,7 +1327,7 @@ async function loadOverlayData() {
         const res = await fetch(`${SC_API}/api/data/${encodeURIComponent(SC_REPO)}`, {
             credentials: 'include'
         });
-        if (!res.ok) { showSlide(currentSlide); var _ml = document.getElementById('main-layout'); if (_ml) { _ml.style.transition = 'opacity 0.15s'; _ml.style.opacity = ''; } return; }
+        if (!res.ok) { showSlide(currentSlide); return; }
         _scData = await res.json();
 
         // 수정본 적용: SLIDES content + title 교체
@@ -1308,11 +1357,31 @@ async function loadOverlayData() {
             }
         }
 
+        // 매핑 수정본 적용
+        if (_scData.mappingEdits) {
+            for (var mid in _scData.mappingEdits) {
+                var mIdx = SLIDES.findIndex(function(s) { return s.id === mid; });
+                if (mIdx !== -1) {
+                    var m = _scData.mappingEdits[mid];
+                    if (typeof m.start === 'number' && typeof m.end === 'number') {
+                        SLIDES[mIdx].start = m.start;
+                        SLIDES[mIdx].end = m.end;
+                        SLIDES[mIdx].hasAudio = true;
+                    }
+                }
+            }
+            // IIFE 내부 오디오 구조 재빌드 (브릿지 경유)
+            if (typeof window._scRebuildAudioStructures === 'function') {
+                window._scRebuildAudioStructures();
+            }
+        }
+
         _scLoaded = true;
 
         // 관리자가 아니면 편집 모드 비활성화
         if (!_scData.isAdmin) {
             _editMode = false;
+            _mappingMode = false;
             var bar = document.querySelector('.edit-bar');
             if (bar) bar.remove();
             document.body.style.paddingTop = '';
@@ -1326,6 +1395,9 @@ async function loadOverlayData() {
             if (steArea) steArea.style.display = 'none';
             var slideArea = document.getElementById('slide-area');
             if (slideArea) slideArea.style.display = '';
+            // 매핑 바 제거
+            var mbBar = document.getElementById('mapping-bar');
+            if (mbBar) mbBar.remove();
         }
 
         // 목차 제목 갱신 (IIFE 브릿지)
@@ -1335,11 +1407,9 @@ async function loadOverlayData() {
 
         // 현재 슬라이드 새로고침 (메모 패널 포함)
         showSlide(currentSlide);
-        var _ml = document.getElementById('main-layout'); if (_ml) { _ml.style.transition = 'opacity 0.15s'; _ml.style.opacity = ''; }
     } catch (e) {
         console.warn('SC API 연결 실패:', e);
         showSlide(currentSlide);
-        var _ml = document.getElementById('main-layout'); if (_ml) { _ml.style.transition = 'opacity 0.15s'; _ml.style.opacity = ''; }
     }
 }
 
@@ -1369,9 +1439,49 @@ function initEditMode() {
     document.body.style.paddingTop = '48px';
 }
 
+// ========== 매핑 편집 모드 UI ==========
+function initMappingMode() {
+    if (!_mappingMode) return;
+    if (_editMode) return;   // 교안 편집 모드가 활성이면 매핑 편집 바 생성 스킵 (DOM id 충돌 방지)
+
+    // 매핑 편집 바 삽입 (?mapping=1이면 무조건 표시)
+    const bar = document.createElement('div');
+    bar.className = 'edit-bar visible';
+    bar.innerHTML = '<span class="edit-bar-label">매핑 편집 모드</span>' +
+        '<div class="edit-bar-actions">' +
+        '<span class="edit-save-status" id="edit-save-status">저장됨</span>' +
+        '<span class="edit-save-error" id="edit-save-error">저장 실패</span>' +
+        '<button class="btn-cancel">취소</button>' +
+        '<button class="btn-save">저장</button>' +
+        '</div>';
+    bar.querySelector('.btn-cancel').addEventListener('click', cancelEdit);
+    bar.querySelector('.btn-save').addEventListener('click', saveEdit);
+    document.body.prepend(bar);
+
+    // 매핑 편집 버튼 핸들러 바인딩
+    var mbStart = document.getElementById('mb-set-start');
+    var mbEnd = document.getElementById('mb-set-end');
+    if (mbStart) mbStart.addEventListener('click', function() {
+        window._scApplyMappingEdit(window._scCurrentSlideIdx(), 'start');
+    });
+    if (mbEnd) mbEnd.addEventListener('click', function() {
+        window._scApplyMappingEdit(window._scCurrentSlideIdx(), 'end');
+    });
+
+    // 매핑 바 즉시 표시
+    if (typeof window._scRenderMappingBar === 'function') window._scRenderMappingBar();
+
+    // body에 패딩 추가 (편집 바 높이만큼)
+    document.body.style.paddingTop = '48px';
+}
+
 let _editDirty = false;
 let _editDirtySlides = {}; // slide.id -> true (미저장 상태 추적)
 let _editBaselines = {}; // slide.id -> {content, title} (취소 시 복원 기준)
+// 매핑 편집 상태 (교안 편집과 병렬 관리)
+let _scDirtyMappings = {};      // slide.id -> true (미저장 매핑 수정)
+let _scMappingBaselines = {};   // slide.id -> {start, end, hasAudio} (취소 시 복원)
+let _scMappingDeletions = {};   // slide.id -> true (삭제 예약)
 
 // content/title 변경 감지 — 편집 모드에선 슬라이드별 dirty 기록
 document.addEventListener('input', (e) => {
@@ -1412,7 +1522,16 @@ function _captureCurrentEdit() {
 function _updateEditBadge() {
     var stat = document.getElementById('edit-save-status');
     if (!stat) return;
-    var n = Object.keys(_editDirtySlides).length;
+    // 활성 모드의 dirty만 카운트 (교안/매핑 상태 독립)
+    var n = 0;
+    if (_editMode) {
+        n = Object.keys(_editDirtySlides).length;
+    } else if (_mappingMode) {
+        var ids = {};
+        Object.keys(_scDirtyMappings).forEach(function(k) { ids[k] = true; });
+        Object.keys(_scMappingDeletions).forEach(function(k) { ids[k] = true; });
+        n = Object.keys(ids).length;
+    }
     if (n > 0) {
         stat.textContent = n + '개 미저장';
         stat.classList.add('pending');
@@ -1424,39 +1543,105 @@ function _updateEditBadge() {
 
 // 탭 닫기 / 새로고침 시에만 네이티브 경고 (페이지 내 이동은 인메모리 유지)
 window.addEventListener('beforeunload', function(e) {
-    if (_editMode && Object.keys(_editDirtySlides).length > 0) {
+    var hasDirty = false;
+    if (_editMode) {
+        hasDirty = Object.keys(_editDirtySlides).length > 0;
+    } else if (_mappingMode) {
+        hasDirty = Object.keys(_scDirtyMappings).length > 0
+                || Object.keys(_scMappingDeletions).length > 0;
+    }
+    if (hasDirty) {
         e.preventDefault();
         e.returnValue = '';
     }
 });
 
 async function saveEdit() {
-    // 현재 슬라이드 편집분을 먼저 캡처
-    _captureCurrentEdit();
-    var dirtyIds = Object.keys(_editDirtySlides);
-    if (dirtyIds.length === 0) return;
+    // 현재 슬라이드 편집분을 먼저 캡처 (교안 모드에서만 contentEditable 존재)
+    if (_editMode) _captureCurrentEdit();
     var failed = [];
-    for (var i = 0; i < dirtyIds.length; i++) {
-        var slideId = dirtyIds[i];
-        var slide = SLIDES.find(function(s) { return s.id === slideId; });
-        if (!slide) { delete _editDirtySlides[slideId]; continue; }
-        try {
-            var res = await fetch(
-                SC_API + '/api/edit/' + encodeURIComponent(SC_REPO) + '/' + slide.id,
-                {
-                    method: 'PUT',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: slide.content, title: slide.title }),
-                }
-            );
-            if (!res.ok) throw new Error('저장 실패');
-            _scData.edits[slide.id] = { content: slide.content, title: slide.title, updatedAt: new Date().toISOString() };
-            delete _editDirtySlides[slide.id];
-            delete _editBaselines[slide.id];
-        } catch (e) {
-            failed.push(slide.id);
+
+    // --- 교안 편집 저장 (교안 모드에서만) ---
+    if (_editMode) {
+        var dirtyIds = Object.keys(_editDirtySlides);
+        for (var i = 0; i < dirtyIds.length; i++) {
+            var slideId = dirtyIds[i];
+            var slide = SLIDES.find(function(s) { return s.id === slideId; });
+            if (!slide) { delete _editDirtySlides[slideId]; continue; }
+            try {
+                var res = await fetch(
+                    SC_API + '/api/edit/' + encodeURIComponent(SC_REPO) + '/' + slide.id,
+                    {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: slide.content, title: slide.title }),
+                    }
+                );
+                if (!res.ok) throw new Error('저장 실패');
+                _scData.edits[slide.id] = { content: slide.content, title: slide.title, updatedAt: new Date().toISOString() };
+                delete _editDirtySlides[slide.id];
+                delete _editBaselines[slide.id];
+            } catch (e) {
+                failed.push(slide.id);
+            }
         }
+    }
+
+    // --- 매핑 편집 저장 + 삭제 (매핑 모드에서만) ---
+    if (_mappingMode) {
+        var mapDirtyIds = Object.keys(_scDirtyMappings);
+        for (var mi = 0; mi < mapDirtyIds.length; mi++) {
+            var mSlideId = mapDirtyIds[mi];
+            var mSlide = SLIDES.find(function(s) { return s.id === mSlideId; });
+            if (!mSlide || !mSlide.hasAudio || mSlide.start === null || mSlide.end === null) {
+                delete _scDirtyMappings[mSlideId];
+                continue;
+            }
+            try {
+                var mRes = await fetch(
+                    SC_API + '/api/mapping/' + encodeURIComponent(SC_REPO) + '/' + mSlideId,
+                    {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ start: mSlide.start, end: mSlide.end }),
+                    }
+                );
+                if (!mRes.ok) throw new Error('매핑 저장 실패');
+                if (!_scData.mappingEdits) _scData.mappingEdits = {};
+                _scData.mappingEdits[mSlideId] = {
+                    start: mSlide.start, end: mSlide.end,
+                    updatedAt: new Date().toISOString(),
+                };
+                delete _scDirtyMappings[mSlideId];
+                delete _scMappingBaselines[mSlideId];
+            } catch (e) {
+                failed.push(mSlideId + '(매핑)');
+            }
+        }
+
+        var mapDelIds = Object.keys(_scMappingDeletions);
+        for (var di = 0; di < mapDelIds.length; di++) {
+            var dSlideId = mapDelIds[di];
+            try {
+                var dRes = await fetch(
+                    SC_API + '/api/mapping/' + encodeURIComponent(SC_REPO) + '/' + dSlideId,
+                    { method: 'DELETE', credentials: 'include' }
+                );
+                if (!dRes.ok) throw new Error('매핑 삭제 실패');
+                if (_scData.mappingEdits) delete _scData.mappingEdits[dSlideId];
+                delete _scMappingDeletions[dSlideId];
+                delete _scMappingBaselines[dSlideId];
+            } catch (e) {
+                failed.push(dSlideId + '(매핑삭제)');
+            }
+        }
+    }
+
+    // --- 재빌드 및 상태 표시 (공통) ---
+    if (typeof window._scRebuildAudioStructures === 'function') {
+        window._scRebuildAudioStructures();
     }
     _editDirty = Object.keys(_editDirtySlides).length > 0;
     _updateEditBadge();
@@ -1475,32 +1660,56 @@ async function saveEdit() {
 }
 
 function cancelEdit() {
-    // 모든 dirty 슬라이드를 베이스라인으로 복원
-    Object.keys(_editBaselines).forEach(function(slideId) {
-        var slide = SLIDES.find(function(s) { return s.id === slideId; });
-        if (!slide) return;
-        var base = _editBaselines[slideId];
-        slide.content = base.content;
-        slide.title = base.title;
-    });
-    _editDirtySlides = {};
-    _editBaselines = {};
-    _editDirty = false;
+    // 교안 편집 복원 (교안 모드에서만)
+    if (_editMode) {
+        Object.keys(_editBaselines).forEach(function(slideId) {
+            var slide = SLIDES.find(function(s) { return s.id === slideId; });
+            if (!slide) return;
+            var base = _editBaselines[slideId];
+            slide.content = base.content;
+            slide.title = base.title;
+        });
+        _editDirtySlides = {};
+        _editBaselines = {};
+        _editDirty = false;
+    }
+
+    // 매핑 편집 복원 (매핑 모드에서만)
+    if (_mappingMode) {
+        Object.keys(_scMappingBaselines).forEach(function(slideId) {
+            var slide = SLIDES.find(function(s) { return s.id === slideId; });
+            if (!slide) return;
+            var base = _scMappingBaselines[slideId];
+            slide.start = base.start;
+            slide.end = base.end;
+            slide.hasAudio = base.hasAudio;
+        });
+        _scDirtyMappings = {};
+        _scMappingBaselines = {};
+        _scMappingDeletions = {};
+    }
+
     _updateEditBadge();
-    // 현재 슬라이드 DOM·목차 복원
+
+    // 현재 슬라이드 DOM 복원 (교안 모드에서만 — 매핑 모드는 contentEditable이 아니라 DOM이 이미 원본)
     var slide = SLIDES[currentSlide];
-    if (slide) {
+    if (slide && _editMode) {
         var contentEl = document.getElementById('slide-content');
         var titleEl = document.getElementById('slide-title');
         if (contentEl) contentEl.innerHTML = slide.content;
         if (titleEl) titleEl.textContent = slide.title;
     }
     if (typeof _refreshTocTitles === 'function') _refreshTocTitles();
-    // 메모 패널 재생성
-    var oldMemo = document.querySelector('.memo-panel');
-    if (oldMemo) oldMemo.remove();
-    if (_scLoaded && slide && (_editMode || (_scData.memos && _scData.memos[slide.id]))) {
-        buildMemoPanel();
+    if (typeof window._scRebuildAudioStructures === 'function') {
+        window._scRebuildAudioStructures();
+    }
+    // 메모 패널 재생성 (교안 모드에서만)
+    if (_editMode) {
+        var oldMemo = document.querySelector('.memo-panel');
+        if (oldMemo) oldMemo.remove();
+        if (_scLoaded && slide) {
+            buildMemoPanel();
+        }
     }
 }
 
@@ -1613,15 +1822,21 @@ const _mapSegments = [];
 let _rafPending = false;
 
 // 오디오 포함 슬라이드를 시작시간 순으로 정렬한 인덱스 (동기화용)
-const audioSlides = SLIDES
-    .map((s, i) => ({idx: i, start: s.start, end: s.end, hasAudio: s.hasAudio}))
-    .filter(s => s.hasAudio && s.start !== null)
-    .sort((a, b) => a.start - b.start);
+// 매핑 편집 시 재계산이 필요하므로 let
+let audioSlides = [];
+function _scRecomputeAudioSlides() {
+    audioSlides = SLIDES
+        .map((s, i) => ({idx: i, start: s.start, end: s.end, hasAudio: s.hasAudio}))
+        .filter(s => s.hasAudio && s.start !== null)
+        .sort((a, b) => a.start - b.start);
+}
+_scRecomputeAudioSlides();
 
 function init() {
     buildNav();
     buildIndex();
     buildAudioMap();
+    // SC_REPO 있으면 loadOverlayData가 KV 적용 후 첫 렌더 (원본 flash 방지)
     if (!SC_REPO) showSlide(0);
     audio.addEventListener('timeupdate', () => {
         if (_rafPending) return;
@@ -1636,15 +1851,17 @@ function init() {
     // 슬라이더 드래그 시: 오디오 위치 이동 + 즉시 슬라이드 동기화
     seekBar.addEventListener('input', () => {
         audio.currentTime = seekBar.value;
+        updateSubtitle(audio.currentTime);
+        if (_mappingMode) { _scHighlightAudioMapAt(audio.currentTime); return; }
         isAutoSync = true;
         syncSlideToTime(audio.currentTime);
-        updateSubtitle(audio.currentTime);
     });
     // 일시정지 상태에서 seek 완료 시에도 슬라이드 동기화
     audio.addEventListener('seeked', () => {
-        syncSlideToTime(audio.currentTime);
         updateTimeDisplay();
         updateSubtitle(audio.currentTime);
+        if (_mappingMode) { _scHighlightAudioMapAt(audio.currentTime); return; }
+        syncSlideToTime(audio.currentTime);
     });
     // 모바일: 메타데이터 미로드 시 로딩 상태 표시
     if (!audio.duration || !isFinite(audio.duration)) {
@@ -1705,12 +1922,12 @@ function highlightKeywordMatches() {
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
     if (!q) return;
-    const kw = q.trim().replace(/\s/g, '').toLowerCase();
+    const kw = q.trim().replace(/\\s/g, '').toLowerCase();
     if (!kw) return;
     SLIDES.forEach((slide, i) => {
         // HTML 태그 제거 후 띄어쓰기 제거 + 소문자 변환
         const text = (slide.title + ' ' + slide.content.replace(/<[^>]*>/g, ''))
-            .replace(/\s/g, '').toLowerCase();
+            .replace(/\\s/g, '').toLowerCase();
         if (text.indexOf(kw) !== -1) {
             if (_indexItems[i]) _indexItems[i].classList.add('keyword-match');
             if (_overlayItems[i]) _overlayItems[i].classList.add('keyword-match');
@@ -1721,6 +1938,10 @@ function highlightKeywordMatches() {
 function buildAudioMap() {
     const map = document.getElementById('audio-map');
     if (!map) return;
+    // 재호출 대응: 기존 DOM·캐시 배열 클리어
+    map.innerHTML = '';
+    _mapSegments.length = 0;
+    _prevMapSeg = null;
     let prevEnd = 0;
     audioSlides.forEach((s, i) => {
         const slide = SLIDES[s.idx];
@@ -1747,6 +1968,50 @@ function buildAudioMap() {
         _mapSegments.push({el: seg, idx: s.idx});
         prevEnd = s.end;
     });
+}
+
+// 매핑 편집 반영: audioSlides 재계산 → audioMap 재빌드 → nav/index 클래스 + 뱃지 갱신.
+// showSlide 재호출은 피한다 — 같은 인덱스 재호출 시 _captureCurrentEdit가 안 불려
+// 편집 중 미캡처 타이핑이 날아갈 수 있기 때문. 뱃지·매핑바만 직접 갱신한다.
+function _scRebuildAudioStructures() {
+    _scRecomputeAudioSlides();
+    buildAudioMap();
+    // nav dot의 has-audio/no-audio 클래스 재설정
+    SLIDES.forEach(function(slide, i) {
+        var dot = _navDots[i];
+        if (!dot) return;
+        dot.classList.toggle('has-audio', !!slide.hasAudio);
+        dot.classList.toggle('no-audio', !slide.hasAudio);
+    });
+    // index item의 has-audio 클래스 재설정
+    SLIDES.forEach(function(slide, i) {
+        var item = _indexItems[i];
+        if (item) item.classList.toggle('has-audio', !!slide.hasAudio);
+        var ov = _overlayItems[i];
+        if (ov) ov.classList.toggle('has-audio', !!slide.hasAudio);
+    });
+    // 현재 슬라이드의 '교안 전용' 뱃지 수동 갱신 (slide-content 건드리지 않음)
+    var cur = SLIDES[currentSlide];
+    var badge = document.getElementById('slide-badge');
+    if (cur && badge) {
+        if (cur.hasAudio) {
+            badge.textContent = '';
+            badge.className = '';
+            badge.style.display = 'none';
+        } else {
+            badge.textContent = '교안 전용';
+            badge.className = 'badge-no-audio';
+            badge.style.display = '';
+        }
+    }
+    // 현재 활성 map segment 재하이라이트: 매핑 모드는 재생 위치 기준, 그 외는 현재 슬라이드 기준
+    if (_mappingMode && typeof _scHighlightAudioMapAt === 'function') {
+        _scHighlightAudioMapAt(audio.currentTime);
+    } else if (typeof updateAudioMap === 'function') {
+        updateAudioMap(currentSlide);
+    }
+    // 매핑 편집 모드면 컨트롤 바도 재렌더 (Task 6에서 정의)
+    if (typeof _scRenderMappingBar === 'function') _scRenderMappingBar();
 }
 
 function updateAudioMap(currentIdx) {
@@ -1797,7 +2062,12 @@ function showSlide(index) {
         _prevIndexItem = _indexItems[index];
     }
     // 오디오 맵 활성화
-    updateAudioMap(index);
+    if (_mappingMode) {
+        // 매핑 편집 모드: 슬라이드 인덱스가 아니라 재생 위치 기준 하이라이트
+        _scHighlightAudioMapAt(audio.currentTime);
+    } else {
+        updateAudioMap(index);
+    }
     // 모바일 FAB: 첫/끝 슬라이드에서 이동 불가 버튼 숨김 (레이아웃 유지)
     var _navPrev = document.getElementById('nav-prev');
     var _navNext = document.getElementById('nav-next');
@@ -1817,6 +2087,8 @@ function showSlide(index) {
     }
 
     window.scrollTo({top: 0, behavior: 'smooth'});
+    // 매핑 편집 모드면 컨트롤 바 갱신
+    if (typeof _scRenderMappingBar === 'function') _scRenderMappingBar();
 }
 
 // 시간 기반 슬라이드 동기화 (바이너리 서치)
@@ -1833,12 +2105,26 @@ function syncSlideToTime(t) {
     }
 }
 
+// 매핑 편집 모드 전용: 슬라이드 이동 없이 오디오 맵 도트만 하이라이트
+function _scHighlightAudioMapAt(t) {
+    let lo = 0, hi = audioSlides.length - 1, result = -1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (audioSlides[mid].start <= t) { result = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+    }
+    const targetIdx = result >= 0 ? audioSlides[result].idx : -1;
+    // -1 전달 시에도 updateAudioMap이 _prevMapSeg를 정리하므로 스테일 하이라이트 방지
+    updateAudioMap(targetIdx);
+}
+
 function onTimeUpdate() {
     const t = audio.currentTime;
     seekBar.value = t;
     updateTimeDisplay();
     updateSubtitle(t);
     if (_subtitleMode) _steSyncHighlight(t);
+    if (_mappingMode) { _scHighlightAudioMapAt(t); return; }
     if (!isAutoSync) return;
     syncSlideToTime(t);
 }
@@ -1878,6 +2164,12 @@ const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 document.addEventListener('keydown', (e) => {
     // 자막 편집 모드는 모든 단축키 비활성화
     if (_subtitleMode) return;
+    // 매핑 편집 모드: Ctrl+S만 인터셉트, 나머지(Space/Arrow/+/-)는 기본 경로 fall-through
+    if (_mappingMode && (e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (typeof saveEdit === 'function') saveEdit();
+        return;
+    }
     // 교안 편집 모드: Shift/Ctrl 조합만 플레이어·네비·저장으로 인터셉트, 일반 키는 편집 기본 동작(커서 이동·공백 입력) 유지
     if (_editMode) {
         // Ctrl/Cmd+S → 저장 (브라우저 기본 저장 다이얼로그 차단)
@@ -2162,7 +2454,7 @@ function _steLsRestore() {
         var ago = Math.round((Date.now() - data.ts) / 60000);
         var count = Object.keys(data.changes).length;
         if (count === 0) return;
-        if (!confirm(count + '개의 미저장 자막 수정분이 있습니다 (' + ago + '분 전).\n복원할까요?')) {
+        if (!confirm(count + '개의 미저장 자막 수정분이 있습니다 (' + ago + '분 전).\\n복원할까요?')) {
             localStorage.removeItem(STE_LS_KEY);
             return;
         }
@@ -2215,6 +2507,7 @@ async function _steSave() {
 
 initSubtitleEdit();
 initEditMode();
+initMappingMode();
 loadOverlayData();
 initSubtitleControls();
 
@@ -2393,6 +2686,7 @@ function initSubtitleControls() {
     updatePosIcon();
 }
 // showSlide/currentSlide를 모바일 FAB에서 접근 가능하도록 전역 노출
+// 전역 loadOverlayData에서 호출하는 목차 갱신 브릿지
 window._refreshTocTitles = function() {
     SLIDES.forEach((s, i) => {
         if (_indexItems[i]) _indexItems[i].querySelector('.idx-title').textContent = s.title;
@@ -2405,6 +2699,171 @@ window._rehighlightKeywordMatches = function() {
     _overlayItems.forEach(it => it && it.classList.remove('keyword-match'));
     highlightKeywordMatches();
 };
+// 현재 슬라이드의 매핑 컨트롤 바 렌더 (교안 편집 모드 전용)
+function _scRenderMappingBar() {
+    var bar = document.getElementById('mapping-bar');
+    if (!bar) return;
+    if (!_mappingMode) {
+        bar.classList.remove('active');
+        bar.style.display = 'none';
+        return;
+    }
+    var slide = SLIDES[currentSlide];
+    if (!slide) return;
+
+    document.getElementById('mb-section-id').textContent = slide.id;
+    var rangeEl = document.getElementById('mb-range');
+    if (slide.hasAudio && slide.start !== null && slide.end !== null) {
+        var dur = (slide.end - slide.start).toFixed(1);
+        rangeEl.textContent = '매핑: ' + slide.start.toFixed(1) + 's ~ ' + slide.end.toFixed(1) + 's  (duration ' + dur + 's)';
+        rangeEl.classList.remove('empty');
+    } else {
+        rangeEl.textContent = '매핑 없음 (교안 전용)';
+        rangeEl.classList.add('empty');
+    }
+
+    // 버튼 활성화 조건: audio.duration이 유효한 finite 값
+    var durOk = isFinite(audio.duration) && audio.duration > 0;
+    document.getElementById('mb-set-start').disabled = !durOk;
+    document.getElementById('mb-set-end').disabled = !durOk;
+
+    bar.classList.add('active');
+    bar.style.display = 'flex';
+}
+
+window._scRenderMappingBar = _scRenderMappingBar;
+
+// 매핑 편집 핵심 로직
+// field: 'start' | 'end'
+function _scApplyMappingEdit(sectionIdx, field) {
+    var slide = SLIDES[sectionIdx];
+    if (!slide) return;
+
+
+    // 'start' or 'end': 현재 오디오 시점 T 사용
+    var T = audio.currentTime;
+    if (!isFinite(T) || T < 0) return;
+
+    // 검증: 반대쪽 끝과의 정합성
+    if (field === 'start' && slide.end !== null && T > slide.end) {
+        _scToast('시작이 끝보다 이후일 수 없습니다');
+        return;
+    }
+    if (field === 'end' && slide.start !== null && T < slide.start) {
+        _scToast('끝이 시작보다 이전일 수 없습니다');
+        return;
+    }
+
+    // No-op 감지: 새 값이 현재 값과 동일하면 아무 것도 하지 않음 (경계 클릭 방지)
+    if (field === 'start' && slide.hasAudio && slide.start === T) return;
+    if (field === 'end' && slide.hasAudio && slide.end === T) return;
+
+    // P 자기 퇴화 체크: 새 start/end가 0-duration 또는 역전이면 거부
+    var newStart = field === 'start' ? T : slide.start;
+    var newEnd = field === 'end' ? T : slide.end;
+    if (newStart !== null && newEnd !== null && newStart >= newEnd) {
+        _scToast('매핑 구간이 0이거나 역전되어 설정할 수 없습니다');
+        return;
+    }
+
+    // 베이스라인 기록 (취소 시 복원용) — 최초 1회만, 모든 guard 통과 후
+    if (!_scMappingBaselines[slide.id]) {
+        _scMappingBaselines[slide.id] = {
+            start: slide.start,
+            end: slide.end,
+            hasAudio: slide.hasAudio,
+        };
+    }
+
+    // 덮어쓰기 규칙: T를 포함하는 다른 페이지 Q의 반대쪽 끝을 T로 자르기
+    // 경계값(q.start === T 또는 q.end === T)은 제외 — 엄격 부등식
+    for (var i = 0; i < SLIDES.length; i++) {
+        if (i === sectionIdx) continue;
+        var q = SLIDES[i];
+        if (!q.hasAudio || q.start === null || q.end === null) continue;
+        if (q.start < T && T < q.end) {
+            // 베이스라인 기록 — Q를 mutation하기 전, 세션 시작(KV 오버레이 머지 후) 상태 캡처
+            if (!_scMappingBaselines[q.id]) {
+                _scMappingBaselines[q.id] = { start: q.start, end: q.end, hasAudio: q.hasAudio };
+            }
+            if (field === 'start') {
+                q.end = T;
+            } else {
+                q.start = T;
+            }
+            // Q가 퇴화되면(start >= end) 교안 전용으로 강등
+            if (q.start >= q.end) {
+                q.hasAudio = false;
+                q.start = null;
+                q.end = null;
+                _scMappingDeletions[q.id] = true;
+                delete _scDirtyMappings[q.id];
+            } else {
+                _scDirtyMappings[q.id] = true;
+                delete _scMappingDeletions[q.id];
+            }
+            break; // 겹침은 항상 0 또는 1개 (불변조건)
+        }
+    }
+
+    // P 자신의 엔드포인트 설정
+    if (field === 'start') {
+        slide.start = T;
+        if (slide.end === null) slide.end = T + 1;  // 임시 placeholder (사용자가 끝도 설정해야 함)
+    } else {
+        slide.end = T;
+        if (slide.start === null) slide.start = Math.max(0, T - 1);
+    }
+    slide.hasAudio = true;
+
+    // 완전 삼킴 검사: P가 다른 Q를 완전히 삼켰다면 Q 강등
+    for (var j = 0; j < SLIDES.length; j++) {
+        if (j === sectionIdx) continue;
+        var qq = SLIDES[j];
+        if (!qq.hasAudio || qq.start === null || qq.end === null) continue;
+        if (slide.start <= qq.start && qq.end <= slide.end) {
+            // 베이스라인 기록 — qq를 nullify하기 전, 세션 시작 상태 캡처
+            if (!_scMappingBaselines[qq.id]) {
+                _scMappingBaselines[qq.id] = { start: qq.start, end: qq.end, hasAudio: qq.hasAudio };
+            }
+            qq.hasAudio = false;
+            qq.start = null;
+            qq.end = null;
+            _scMappingDeletions[qq.id] = true;
+            delete _scDirtyMappings[qq.id];
+            _scToast(qq.id + ' 매핑이 ' + slide.id + ' 범위에 흡수되어 교안 전용으로 전환됨');
+        }
+    }
+
+    _scDirtyMappings[slide.id] = true;
+    delete _scMappingDeletions[slide.id];
+    _scRebuildAudioStructures();
+    _updateEditBadge();
+}
+
+// 단순 토스트 (기존 _scToast 있으면 재활용, 없으면 간단 alert 대체)
+function _scToast(msg) {
+    var t = document.getElementById('sc-toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'sc-toast';
+        t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(40,40,40,0.92);color:#fff;padding:14px 24px;border-radius:8px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;opacity:0;transition:opacity 0.2s;pointer-events:none;';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function() { t.style.opacity = '0'; }, 3000);
+}
+
+window._scApplyMappingEdit = _scApplyMappingEdit;
+// 전역(loadOverlayData, saveEdit, cancelEdit)에서 IIFE 내부 재빌드를 호출하기 위한 브릿지
+window._scRebuildAudioStructures = _scRebuildAudioStructures;
+// 매핑 편집 버튼 핸들러가 audio.currentTime을 읽기 위한 브릿지
+window._scGetAudioTime = function() { return audio.currentTime; };
+window._scGetAudioDuration = function() { return audio.duration; };
+// 매핑 편집 버튼 핸들러가 현재 슬라이드 인덱스를 읽기 위한 브릿지
+window._scCurrentSlideIdx = function() { return currentSlide; };
 window.showSlide = showSlide;
 window.openOverlay = openOverlay;
 window.closeOverlay = closeOverlay;
