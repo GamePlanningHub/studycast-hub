@@ -6,15 +6,17 @@ export async function onRequestGet(context) {
   const repo = params.repo;
   const admin = isAdmin(request, env);
 
-  const [editKeys, memoKeys, transcriptKeys] = await Promise.all([
+  const [editKeys, memoKeys, transcriptKeys, mappingKeys] = await Promise.all([
     env.STUDYCAST_DATA.list({ prefix: `edit:${repo}/` }),
     env.STUDYCAST_DATA.list({ prefix: `memo:${repo}/` }),
     env.STUDYCAST_DATA.list({ prefix: `transcript:${repo}/` }),
+    env.STUDYCAST_DATA.list({ prefix: `mapping:${repo}/` }),
   ]);
 
   const edits = {};
   const memos = {};
   const transcriptEdits = {};
+  const mappingEdits = {};
 
   const editPromises = editKeys.keys.map(async (k) => {
     const val = await env.STUDYCAST_DATA.get(k.name, "json");
@@ -31,7 +33,11 @@ export async function onRequestGet(context) {
       transcriptEdits[segId] = val.text;
     }
   });
+  const mappingPromises = mappingKeys.keys.map(async (k) => {
+    const val = await env.STUDYCAST_DATA.get(k.name, "json");
+    if (val) mappingEdits[k.name.split("/").pop()] = val;
+  });
 
-  await Promise.all([...editPromises, ...memoPromises, ...transcriptPromises]);
-  return json({ edits, memos, transcriptEdits, isAdmin: admin });
+  await Promise.all([...editPromises, ...memoPromises, ...transcriptPromises, ...mappingPromises]);
+  return json({ edits, memos, transcriptEdits, mappingEdits, isAdmin: admin });
 }

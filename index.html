@@ -420,6 +420,12 @@ footer a:hover { opacity: 1; }
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M5 16h14M5 12h8"/></svg>
         <span>자막 편집</span>
       </button>
+      <button id="mapping-toggle" class="edit-toggle" style="display:none" onclick="toggleMappingMode()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 0 2-2"/>
+        </svg>
+        매핑 편집
+      </button>
       <button id="stats-toggle" class="edit-toggle" style="display:none" onclick="toggleStats()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
         <span>통계</span>
@@ -664,42 +670,67 @@ function escHtml(str) {
         .replace(/"/g,'&quot;');
 }
 
-// 교안 편집 토글 (자막 편집과 상호 배타)
+// 교안 편집 토글 (자막/매핑 편집과 상호 배타)
 function toggleEditMode() {
     const btn = document.getElementById('edit-toggle');
     const subBtn = document.getElementById('subtitle-toggle');
+    const mapBtn = document.getElementById('mapping-toggle');
     const isActive = btn.classList.toggle('active');
     if (isActive) {
         subBtn.classList.remove('active');
+        if (mapBtn) mapBtn.classList.remove('active');
         sessionStorage.setItem('sc-subtitle-mode', '');
+        sessionStorage.setItem('sc-mapping-mode', '');
     }
     sessionStorage.setItem('sc-edit-mode', isActive ? '1' : '');
     updateCardLinks();
 }
 
-// 자막 편집 토글 (교안 편집과 상호 배타)
+// 자막 편집 토글 (교안/매핑 편집과 상호 배타)
 function toggleSubtitleMode() {
     const btn = document.getElementById('subtitle-toggle');
     const editBtn = document.getElementById('edit-toggle');
+    const mapBtn = document.getElementById('mapping-toggle');
     const isActive = btn.classList.toggle('active');
     if (isActive) {
         editBtn.classList.remove('active');
+        if (mapBtn) mapBtn.classList.remove('active');
         sessionStorage.setItem('sc-edit-mode', '');
+        sessionStorage.setItem('sc-mapping-mode', '');
     }
     sessionStorage.setItem('sc-subtitle-mode', isActive ? '1' : '');
     updateCardLinks();
 }
 
-// 카드 링크 갱신 (편집/자막 파라미터 반영)
+// 매핑 편집 토글 (교안/자막 편집과 상호 배타)
+function toggleMappingMode() {
+    const btn = document.getElementById('mapping-toggle');
+    const editBtn = document.getElementById('edit-toggle');
+    const subBtn = document.getElementById('subtitle-toggle');
+    const isActive = btn.classList.toggle('active');
+    if (isActive) {
+        editBtn.classList.remove('active');
+        subBtn.classList.remove('active');
+        sessionStorage.setItem('sc-edit-mode', '');
+        sessionStorage.setItem('sc-subtitle-mode', '');
+    }
+    sessionStorage.setItem('sc-mapping-mode', isActive ? '1' : '');
+    updateCardLinks();
+}
+
+// 카드 링크 갱신 (편집/자막/매핑 파라미터 반영)
 function updateCardLinks() {
     const editMode = sessionStorage.getItem('sc-edit-mode') === '1';
     const subtitleMode = sessionStorage.getItem('sc-subtitle-mode') === '1';
+    const mappingMode = sessionStorage.getItem('sc-mapping-mode') === '1';
     document.querySelectorAll('.card').forEach(card => {
         const url = new URL(card.href, location.origin);
         url.searchParams.delete('edit');
         url.searchParams.delete('subtitle');
+        url.searchParams.delete('mapping');
         if (editMode) url.searchParams.set('edit', '1');
         if (subtitleMode) url.searchParams.set('subtitle', '1');
+        if (mappingMode) url.searchParams.set('mapping', '1');
         card.href = url.pathname + url.search;
     });
 }
@@ -841,6 +872,7 @@ function formatDate(isoStr) {
             if (data.isAdmin) {
                 document.getElementById('edit-toggle').style.display = '';
                 document.getElementById('subtitle-toggle').style.display = '';
+                document.getElementById('mapping-toggle').style.display = '';
                 document.getElementById('stats-toggle').style.display = '';
                 // 세션 복원
                 if (sessionStorage.getItem('sc-edit-mode') === '1') {
@@ -848,6 +880,9 @@ function formatDate(isoStr) {
                 }
                 if (sessionStorage.getItem('sc-subtitle-mode') === '1') {
                     document.getElementById('subtitle-toggle').classList.add('active');
+                }
+                if (sessionStorage.getItem('sc-mapping-mode') === '1') {
+                    document.getElementById('mapping-toggle').classList.add('active');
                 }
             }
         }
