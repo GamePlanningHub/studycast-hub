@@ -1363,7 +1363,11 @@ async function loadOverlayData() {
                 var mIdx = SLIDES.findIndex(function(s) { return s.id === mid; });
                 if (mIdx !== -1) {
                     var m = _scData.mappingEdits[mid];
-                    if (typeof m.start === 'number' && typeof m.end === 'number') {
+                    if (m.hasAudio === false) {
+                        SLIDES[mIdx].start = null;
+                        SLIDES[mIdx].end = null;
+                        SLIDES[mIdx].hasAudio = false;
+                    } else if (typeof m.start === 'number' && typeof m.end === 'number') {
                         SLIDES[mIdx].start = m.start;
                         SLIDES[mIdx].end = m.end;
                         SLIDES[mIdx].hasAudio = true;
@@ -1627,10 +1631,19 @@ async function saveEdit() {
             try {
                 var dRes = await fetch(
                     SC_API + '/api/mapping/' + encodeURIComponent(SC_REPO) + '/' + dSlideId,
-                    { method: 'DELETE', credentials: 'include' }
+                    {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hasAudio: false }),
+                    }
                 );
-                if (!dRes.ok) throw new Error('매핑 삭제 실패');
-                if (_scData.mappingEdits) delete _scData.mappingEdits[dSlideId];
+                if (!dRes.ok) throw new Error('매핑 강등 실패');
+                if (!_scData.mappingEdits) _scData.mappingEdits = {};
+                _scData.mappingEdits[dSlideId] = {
+                    hasAudio: false,
+                    updatedAt: new Date().toISOString(),
+                };
                 delete _scMappingDeletions[dSlideId];
                 delete _scMappingBaselines[dSlideId];
             } catch (e) {
