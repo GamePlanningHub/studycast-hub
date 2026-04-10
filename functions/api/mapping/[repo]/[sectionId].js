@@ -7,21 +7,29 @@ export async function onRequestPut(context) {
   if (denied) return denied;
 
   const body = await request.json().catch(() => null);
-  if (!body || typeof body.start !== "number" || typeof body.end !== "number") {
+  if (!body) return json({ error: "invalid body" }, 400);
+
+  const key = `mapping:${params.repo}/${params.sectionId}`;
+  const now = new Date().toISOString();
+
+  // 교안 전용 강등: {hasAudio: false}
+  if (body.hasAudio === false) {
+    const value = { hasAudio: false, updatedAt: now };
+    await env.STUDYCAST_DATA.put(key, JSON.stringify(value));
+    return json({ ok: true, updatedAt: now });
+  }
+
+  // 일반 매핑 저장: {start, end}
+  if (typeof body.start !== "number" || typeof body.end !== "number") {
     return json({ error: "start/end must be numbers" }, 400);
   }
   if (!(body.start >= 0) || !(body.end > body.start)) {
     return json({ error: "invalid range: require start >= 0 and end > start" }, 400);
   }
 
-  const key = `mapping:${params.repo}/${params.sectionId}`;
-  const value = {
-    start: body.start,
-    end: body.end,
-    updatedAt: new Date().toISOString(),
-  };
+  const value = { start: body.start, end: body.end, updatedAt: now };
   await env.STUDYCAST_DATA.put(key, JSON.stringify(value));
-  return json({ ok: true, updatedAt: value.updatedAt });
+  return json({ ok: true, updatedAt: now });
 }
 
 // DELETE /api/mapping/{repo}/{sectionId} — 매핑 오버레이 삭제 (원본 복원)
