@@ -1915,13 +1915,22 @@ function _scRebuildAudioStructures() {
     if (typeof _scRenderMappingBar === 'function') _scRenderMappingBar();
 }
 
+// 수평 스크롤 컨테이너 내 요소를 가운데로 스크롤 (양끝단은 끄트머리 정렬)
+function _scrollDotCenter(container, el) {
+    if (!container || !el) return;
+    var target = el.offsetLeft - (container.clientWidth - el.offsetWidth) / 2;
+    container.scrollTo({ left: target, behavior: 'smooth' });
+}
+
 function updateAudioMap(currentIdx) {
     if (_prevMapSeg) _prevMapSeg.classList.remove('active');
+    var oldSeg = _prevMapSeg;
     _prevMapSeg = null;
     for (let i = 0; i < _mapSegments.length; i++) {
         if (_mapSegments[i].idx === currentIdx) {
             _mapSegments[i].el.classList.add('active');
             _prevMapSeg = _mapSegments[i].el;
+            if (_prevMapSeg !== oldSeg) _scrollDotCenter(document.getElementById("audio-map"), _prevMapSeg);
             break;
         }
     }
@@ -1952,9 +1961,10 @@ function showSlide(index) {
         badge.className = 'badge-no-audio';
         badge.style.display = '';
     }
-    // 네비게이션 도트 활성화 (캐싱)
+    // 네비게이션 도트 활성화 (캐싱) + 가운데 스크롤
     if (_prevNavDot) _prevNavDot.classList.remove('active');
     if (_navDots[index]) { _navDots[index].classList.add('active'); _prevNavDot = _navDots[index]; }
+    _scrollDotCenter(document.getElementById("slide-nav"), _navDots[index]);
     // 인덱스 패널 활성화 (캐싱)
     if (_prevIndexItem) _prevIndexItem.classList.remove('active');
     if (_indexItems[index]) {
