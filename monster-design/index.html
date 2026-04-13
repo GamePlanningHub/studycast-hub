@@ -48,6 +48,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
+button, select, a, .nav-dot { touch-action: manipulation; }
 
 body {
     font-family: 'Noto Sans KR', -apple-system, sans-serif;
@@ -57,6 +58,23 @@ body {
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
 }
+
+/* ========== 로딩 오버레이 ========== */
+#sc-loading-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: var(--bg-void);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .3s ease;
+}
+#sc-loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+#sc-loading-overlay .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border-subtle, #333);
+    border-top-color: var(--accent, #8B6914);
+    border-radius: 50%;
+    animation: sc-spin .7s linear infinite;
+}
+@keyframes sc-spin { to { transform: rotate(360deg); } }
 
 /* ========== 플레이어 헤더 (sticky 래퍼) ========== */
 #player-header {
@@ -992,6 +1010,7 @@ body {
 </style>
 </head>
 <body>
+<div id="sc-loading-overlay"><div class="spinner"></div></div>
 <div id="app">
   <div id="player-header">
   <div id="audio-bar">
@@ -1360,6 +1379,12 @@ const SC_API = '';
 const SC_REPO = document.querySelector('meta[name="sc-repo"]')?.content || '';
 let _scData = { edits: {}, memos: {}, isAdmin: false };
 let _scLoaded = false;
+function _dismissLoading() {
+    var ol = document.getElementById('sc-loading-overlay');
+    if (!ol) return;
+    ol.classList.add('fade-out');
+    ol.addEventListener('transitionend', function() { ol.remove(); });
+}
 let _editMode = new URLSearchParams(location.search).has('edit');
 let _subtitleMode = new URLSearchParams(location.search).has('subtitle');
 let _mappingMode = new URLSearchParams(location.search).has('mapping');
@@ -1370,12 +1395,12 @@ const _scOriginalMapping = SLIDES.map(function(s) {
 });
 
 async function loadOverlayData() {
-    if (!SC_REPO) return;
+    if (!SC_REPO) { _dismissLoading(); return; }
     try {
         const res = await fetch(`${SC_API}/api/data/${encodeURIComponent(SC_REPO)}`, {
             credentials: 'include'
         });
-        if (!res.ok) { showSlide(currentSlide); return; }
+        if (!res.ok) { showSlide(currentSlide); _dismissLoading(); return; }
         _scData = await res.json();
 
         // 수정본 적용: SLIDES content + title 교체
@@ -1459,9 +1484,11 @@ async function loadOverlayData() {
 
         // 현재 슬라이드 새로고침 (메모 패널 포함)
         showSlide(currentSlide);
+        _dismissLoading();
     } catch (e) {
         console.warn('SC API 연결 실패:', e);
         showSlide(currentSlide);
+        _dismissLoading();
     }
 }
 
@@ -2233,8 +2260,14 @@ function skipTime(sec) {
 
 const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 document.addEventListener('keydown', (e) => {
-    // 자막 편집 모드는 모든 단축키 비활성화
-    if (_subtitleMode) return;
+    // 자막 편집 모드: Ctrl+S만 인터셉트, 나머지 비활성화
+    if (_subtitleMode) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            if (typeof _steSave === 'function') _steSave();
+        }
+        return;
+    }
     // 매핑 편집 모드: Ctrl+S만 인터셉트, 나머지(Space/Arrow/+/-)는 기본 경로 fall-through
     if (_mappingMode && (e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
@@ -2351,6 +2384,8 @@ var _steCurrentIdx = -1;
 
 const STE_LS_KEY = 'subtitle_backup_' + SC_REPO;
 
+// 전역 keydown에서 자막 저장을 호출하기 위한 브릿지
+window._steSave = _steSave;
 // loadOverlayData(전역)에서 IIFE 내부 자막 편집 상태를 갱신하기 위한 브릿지
 window._steApplyOverlay = function(transcriptEdits) {
     for (var segId in transcriptEdits) {
