@@ -387,6 +387,8 @@ footer a:hover { opacity: 1; }
     main { padding: 16px 14px 60px; }
     #grid { grid-template-columns: 1fr; gap: 10px; }
     .card { padding: 16px 18px; }
+    .notice-banner { margin: 12px 14px 0 !important; }
+    .notice-break { display: block; height: 0; }
 }
 </style>
 </head>
@@ -407,7 +409,7 @@ footer a:hover { opacity: 1; }
 
 <div class="notice-banner" role="status" style="max-width:1000px;margin:16px auto 0;padding:12px 18px;background:linear-gradient(135deg,rgba(124,92,62,0.08),rgba(124,92,62,0.04));border:1px solid var(--border-dim);border-left:3px solid var(--accent);border-radius:var(--radius);font-size:13px;color:var(--text-primary);letter-spacing:-0.1px;display:flex;align-items:center;gap:10px;">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;color:var(--accent);"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-  <span>프로젝트 진행으로 업데이트가 당분간 지연됩니다. 마무리되는 대로 재개할게요.</span>
+  <span>프로젝트 진행으로 업데이트가 당분간 지연됩니다.<span class="notice-break"> </span>마무리되는 대로 재개할게요.</span>
 </div>
 
 <div class="search-wrap">
