@@ -62,5 +62,9 @@
   {
     "folder": "monster-design",
     "title": "16. 몬스터 디자인"
+  },
+  {
+    "folder": "skill-status-design",
+    "title": "17. 스킬과 상태이상"
   }
 ]

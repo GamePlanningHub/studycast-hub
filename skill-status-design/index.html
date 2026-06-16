@@ -1,0 +1,2864 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="sc-repo" content="skill-status-design">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev" crossorigin>
+<title>17. 스킬과 상태이상</title>
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    --bg-void: #FAF9F7;
+    --bg-surface: #F5F4F1;
+    --bg-elevated: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-glass: rgba(250, 249, 247, 0.92);
+    --border-subtle: rgba(0,0,0,0.06);
+    --border-dim: #E5E2DC;
+    --accent-rgb: 124,92,62;
+    --border-accent: rgba(var(--accent-rgb),0.25);
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --text-muted: #A8A29E;
+    --accent: #7C5C3E;
+    --accent-glow: rgba(var(--accent-rgb),0.12);
+    --accent-bright: #63492F;
+    --gold: #B45309;
+    --gold-dim: rgba(180,83,9,0.08);
+    --green: #16A34A;
+    --green-dim: rgba(22,163,74,0.08);
+    --red: #DC2626;
+    --red-dim: rgba(220,38,38,0.07);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-sans: 'Noto Sans KR', sans-serif;
+    --bp-mobile: 900px;
+    --z-subtitle: 1000;
+    --z-fab: 1100;
+    --z-overlay: 1200;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+/* 모바일 더블탭 줌 방지 (핀치 줌은 유지) */
+button, select, a, .nav-dot { touch-action: manipulation; }
+
+body {
+    font-family: 'Noto Sans KR', -apple-system, sans-serif;
+    background: var(--bg-void);
+    color: var(--text-primary);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+/* ========== 로딩 오버레이 ========== */
+#sc-loading-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: var(--bg-void);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .3s ease;
+}
+#sc-loading-overlay.fade-out { opacity: 0; pointer-events: none; }
+#sc-loading-overlay .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border-subtle, #333);
+    border-top-color: var(--accent, #8B6914);
+    border-radius: 50%;
+    animation: sc-spin .7s linear infinite;
+}
+@keyframes sc-spin { to { transform: rotate(360deg); } }
+
+/* ========== 플레이어 헤더 (sticky 래퍼) ========== */
+#player-header {
+    position: sticky; top: 0; z-index: 100;
+}
+
+/* ========== 오디오 바 ========== */
+#audio-bar {
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-dim);
+    padding: 12px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+#audio-controls {
+    display: flex; align-items: center; gap: 12px;
+    max-width: 860px; margin: 0 auto;
+}
+#play-btn {
+    background: var(--accent);
+    border: none; color: #fff;
+    width: 38px; height: 38px; border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.2);
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+#play-btn svg { display: block; }
+#play-btn:hover {
+    background: var(--accent-bright);
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb),0.2);
+}
+#play-btn.loading { position: relative; }
+#play-btn.loading::after {
+    content: ''; position: absolute; inset: -3px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: var(--accent-bright);
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#time-display.loading { opacity: 0.5; }
+.hub-btn {
+    background: transparent;
+    border: 1px solid var(--border-dim);
+    color: var(--accent);
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+    text-decoration: none;
+    margin-right: 4px;
+}
+.hub-btn svg { display: block; }
+.hub-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+.skip-btn {
+    background: transparent;
+    border: 1px solid var(--border-dim);
+    color: var(--text-muted);
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+.skip-btn svg { display: block; }
+.skip-btn:hover {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+#time-display {
+    color: var(--text-muted); font-size: 12px;
+    min-width: 90px; font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+}
+
+/* 커스텀 시크바 */
+#seek-bar {
+    flex: 1; height: 3px;
+    -webkit-appearance: none; appearance: none;
+    background: var(--border-dim);
+    border-radius: 2px; outline: none;
+    cursor: pointer; transition: height 0.15s ease;
+}
+#seek-bar:hover { height: 5px; }
+#seek-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 1px 4px rgba(var(--accent-rgb),0.2);
+    cursor: pointer;
+    transition: var(--transition);
+}
+#seek-bar::-webkit-slider-thumb:hover {
+    transform: scale(1.25);
+}
+#seek-bar::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%; border: none;
+    background: var(--accent);
+    cursor: pointer;
+}
+
+#speed-select {
+    background: var(--bg-elevated); color: var(--text-secondary);
+    border: 1px solid var(--border-dim);
+    border-radius: 6px; padding: 5px 10px;
+    font-size: 11px; font-family: var(--font-mono);
+    cursor: pointer; outline: none;
+    transition: var(--transition);
+}
+#speed-select:hover { border-color: var(--accent); }
+
+/* 재생 버튼 그룹 */
+.playback-group {
+    display: flex; align-items: center; gap: 12px;
+}
+
+/* ========== 슬라이드 네비게이션 ========== */
+#slide-nav {
+    display: flex; gap: 3px; padding: 10px 24px;
+    overflow-x: auto; background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-dim);
+    justify-content: safe center; flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+#slide-nav::-webkit-scrollbar { display: none; }
+
+.nav-dot {
+    width: 34px; height: 28px; border-radius: 7px;
+    border: 1px solid transparent; cursor: pointer;
+    font-size: 11px; font-weight: 500;
+    font-family: var(--font-mono);
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition);
+    position: relative;
+    flex-shrink: 0;
+}
+.nav-dot.has-audio {
+    background: rgba(var(--accent-rgb),0.07); color: var(--accent);
+    border-color: rgba(var(--accent-rgb),0.15);
+}
+.nav-dot.no-audio {
+    background: transparent; color: var(--text-muted);
+    opacity: 0.55;
+}
+.nav-dot:hover {
+    opacity: 1;
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb),0.08);
+}
+.nav-dot.active {
+    background: var(--accent); color: #fff;
+    opacity: 1;
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.18);
+    border-color: transparent;
+}
+
+/* 슬라이드 전환 애니메이션 */
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+#slide-content {
+    animation: slideIn 0.25s ease-out;
+}
+
+#slide-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+#slide-id {
+    color: var(--accent); font-size: 11px; letter-spacing: 2px;
+    font-weight: 500; text-transform: uppercase;
+    font-family: var(--font-mono);
+}
+#slide-badge {
+    font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    font-weight: 500; letter-spacing: 0.3px;
+}
+.badge-no-audio {
+    background: var(--gold-dim); color: var(--accent);
+    border: 1px solid rgba(var(--accent-rgb),0.2);
+    font-weight: 600;
+}
+
+#slide-title {
+    font-size: 24px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: 28px; line-height: 1.5;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-dim);
+    letter-spacing: -0.3px;
+}
+
+/* ========== 슬라이드 콘텐츠 블록 ========== */
+
+.slide-text {
+    color: var(--text-secondary); font-size: 15px;
+    line-height: 1.85; margin-bottom: 18px;
+    font-weight: 400;
+}
+.slide-text strong {
+    color: var(--text-primary); font-weight: 600;
+    background: var(--gold-dim);
+    padding: 1px 5px; border-radius: 4px;
+}
+.slide-text em {
+    color: var(--accent); font-style: italic; font-weight: 400;
+}
+
+/* 인용 블록 */
+.slide-quote {
+    background: var(--bg-surface);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px; margin-bottom: 14px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--text-secondary); font-size: 14.5px;
+    line-height: 1.8; font-weight: 400;
+}
+.slide-quote strong {
+    color: var(--text-primary); font-weight: 600;
+}
+
+/* 포인트 리스트 */
+.slide-points {
+    list-style: none; margin-bottom: 18px; padding-left: 0;
+    display: flex; flex-direction: column; gap: 5px;
+}
+.slide-points li {
+    position: relative;
+    padding: 11px 16px 11px 34px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    font-size: 14px; line-height: 1.7;
+    color: var(--text-secondary); font-weight: 400;
+    border: 1px solid var(--border-dim);
+    transition: var(--transition);
+}
+.slide-points li:hover {
+    border-color: rgba(var(--accent-rgb),0.16);
+    background: #FDF9F6;
+}
+.slide-points li::before {
+    content: '';
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%);
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+.slide-points li strong {
+    color: var(--text-primary); font-weight: 600;
+}
+
+/* 노트 블록 (aside) */
+.slide-note {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: #FDF9F6;
+    border: 1px solid rgba(var(--accent-rgb),0.15);
+    border-radius: var(--radius);
+    padding: 16px 18px; margin-top: 24px;
+    position: relative; overflow: hidden;
+}
+.slide-note::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent);
+    opacity: 0.6;
+}
+.note-content {
+    color: var(--text-secondary); font-size: 13.5px;
+    line-height: 1.8; font-weight: 400;
+}
+.note-content strong { color: var(--text-primary); font-weight: 600; }
+
+/* 이미지 */
+.slide-image {
+    margin-bottom: 20px; text-align: center;
+}
+.slide-image img {
+    max-width: 100%; border-radius: var(--radius);
+    border: 1px solid var(--border-dim);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+/* ========== 정의 카드 (> **제목** 본문 패턴) ========== */
+.slide-def-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-dim);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    transition: var(--transition);
+}
+.slide-def-card:hover {
+    border-color: rgba(var(--accent-rgb),0.18);
+    border-left-color: var(--accent-bright);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.def-title {
+    color: var(--accent); font-size: 14px; font-weight: 700;
+    margin-bottom: 7px; letter-spacing: 0.1px;
+}
+.def-desc {
+    color: var(--text-secondary); font-size: 13.5px;
+    line-height: 1.8; font-weight: 400;
+}
+.def-desc strong { color: var(--text-primary); font-weight: 600; }
+
+/* ========== 섹션 카드 (**볼드 헤더** + 본문) ========== */
+.slide-card {
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-dim);
+    transition: var(--transition);
+}
+.slide-card:hover {
+    border-color: rgba(var(--accent-rgb),0.16);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.card-heading {
+    color: var(--text-primary); font-size: 14px; font-weight: 600;
+    margin-bottom: 5px; display: flex; align-items: center; gap: 8px;
+}
+.card-heading::before {
+    content: ''; display: inline-block;
+    width: 3px; height: 13px;
+    background: var(--accent); border-radius: 2px;
+    flex-shrink: 0;
+}
+.card-desc {
+    color: var(--text-secondary); font-size: 13.5px;
+    line-height: 1.8; font-weight: 400;
+    padding-left: 11px;
+}
+.card-desc strong { color: var(--text-primary); font-weight: 600; }
+.card-desc em { color: var(--accent); font-style: italic; }
+
+/* ========== 오디오 구간 맵 (재생바 아래 타임라인) ========== */
+#audio-map {
+    max-width: 860px; margin: 8px auto 0;
+    height: 22px;
+    display: flex;
+    gap: 1px;
+    border-radius: 4px;
+    overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: var(--border-dim);
+    scrollbar-width: none;
+}
+#audio-map::-webkit-scrollbar { display: none; }
+.map-segment {
+    height: 100%;
+    min-width: 20px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 500;
+    font-family: var(--font-mono);
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    transition: filter 0.15s;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 0 2px;
+}
+.map-segment:hover {
+    filter: brightness(1.15);
+    z-index: 1;
+}
+.map-segment.active {
+    filter: brightness(1.15);
+    color: #FDF9F6;
+    font-weight: 500;
+    box-shadow: inset 0 0 0 1.5px rgba(var(--accent-rgb),0.6);
+}
+/* 구간별 색상 */
+.map-segment:nth-of-type(odd)  { background: rgba(var(--accent-rgb),0.5); }
+.map-segment:nth-of-type(even) { background: rgba(99,73,47,0.38); }
+.map-gap {
+    height: 100%;
+    background: var(--border-dim);
+}
+
+/* ========== 메인 레이아웃 (콘텐츠 + 인덱스) ========== */
+#main-layout {
+    display: flex;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+#slide-area {
+    flex: 1;
+    min-width: 0;
+}
+#slide-container {
+    max-width: 800px; margin: 0 auto;
+    padding: 36px 28px 80px;
+}
+
+/* ========== 인덱스 패널 (우측 사이드바) ========== */
+#index-panel {
+    width: 236px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-dim);
+    background: var(--bg-surface);
+    position: sticky;
+    top: 80px;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-dim) transparent;
+}
+#index-panel::-webkit-scrollbar { width: 4px; }
+#index-panel::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 2px; }
+
+#index-header {
+    padding: 16px 14px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    font-family: var(--font-sans);
+    border-bottom: 1px solid var(--border-dim);
+}
+
+.index-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    border-left: 2px solid transparent;
+    font-size: 12px;
+    line-height: 1.5;
+}
+.index-item:hover {
+    background: var(--bg-elevated);
+    border-left-color: rgba(var(--accent-rgb),0.18);
+}
+.index-item.active {
+    background: var(--bg-elevated);
+    border-left-color: var(--accent);
+}
+.index-item .idx-id {
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    min-width: 28px;
+}
+.index-item .idx-title {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+.index-item.active .idx-title {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+/* 키워드 매칭 하이라이트 */
+.index-item.keyword-match {
+    background: rgba(255, 213, 79, 0.18);
+    border-left-color: #F9A825;
+}
+.index-item.keyword-match:hover {
+    background: rgba(255, 213, 79, 0.28);
+}
+.index-item.keyword-match.active {
+    background: rgba(255, 213, 79, 0.22);
+    border-left-color: var(--accent);
+}
+/* 교안 전용 목차 항목 */
+.index-item:not(.has-audio) .idx-id::after {
+    content: '';
+    display: inline-block;
+    width: 5px; height: 5px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-left: 3px;
+    vertical-align: middle;
+}
+
+/* ========== 반응형 ========== */
+@media (max-width: 900px) {
+    #index-panel { display: none; }
+    #main-layout { display: block; }
+    #audio-map { margin-top: 12px; }
+}
+@media (max-width: 640px) {
+    /* 오디오 바 — 2행 레이아웃 */
+    #audio-bar { padding: 10px 12px; }
+    #audio-map { margin-top: 16px; }
+    #audio-controls { gap: 6px; flex-wrap: wrap; }
+    #play-btn { width: 36px; height: 36px; font-size: 14px; }
+    .skip-btn { width: 30px; height: 30px; font-size: 11px; }
+    #time-display { min-width: auto; font-size: 10px; }
+    #speed-select { padding: 4px 6px; font-size: 10px; }
+    #seek-bar { order: 10; flex: unset; width: 100%; height: 4px; margin-top: 2px; }
+    /* 재생 버튼 그룹 — 오른쪽 정렬 (오른손 조작 최적화) */
+    .playback-group { margin-left: auto; gap: 6px; }
+
+    /* 네비게이션 도트 — sticky 헤더 내 배경 보장 */
+    #slide-nav { padding: 8px 12px; gap: 2px; background: var(--bg-surface); }
+    .nav-dot { width: 28px; height: 26px; font-size: 9px; }
+
+    /* 슬라이드 영역 */
+    #slide-container { padding: 20px 14px 80px; }
+    #slide-title { font-size: 20px; margin-bottom: 20px; padding-bottom: 14px; }
+    #slide-header { gap: 8px; margin-bottom: 8px; }
+    #slide-id { font-size: 10px; }
+    #slide-badge { font-size: 9px; padding: 2px 8px; }
+
+    /* 콘텐츠 블록 */
+    .slide-text { font-size: 13.5px; line-height: 1.9; }
+    .slide-card { padding: 16px; }
+    .slide-def-card { padding: 14px; }
+    .slide-note { padding: 14px 16px; font-size: 12.5px; }
+    .slide-points li { font-size: 13.5px; }
+    .slide-image img { max-height: 50vh; }
+
+    /* 자막 */
+    #subtitle-box { padding: 8px 14px; border-radius: 8px; }
+    #subtitle-text { font-size: 0.85rem; }
+}
+
+/* ========== 자막 편집 모드 ========== */
+.subtitle-edit-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 40px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-dim);
+    gap: 12px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.ste-left { display: flex; align-items: center; gap: 10px; }
+.ste-right { display: flex; align-items: center; gap: 8px; }
+.ste-scope-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--bg-elevated); border: 1px solid var(--border-dim);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer;
+    color: var(--text-secondary); transition: 0.15s;
+}
+.ste-scope-btn:hover { border-color: var(--accent); color: var(--accent); }
+.ste-scope-btn.active { background: rgba(124,92,62,0.08); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.ste-change-badge {
+    font-size: 11px; font-weight: 600;
+    background: rgba(217,119,6,0.08); color: #D97706;
+    border: 1px solid rgba(217,119,6,0.2);
+    border-radius: 20px; padding: 2px 10px;
+    display: none;
+}
+.ste-search {
+    font-family: 'Noto Sans KR', sans-serif; font-size: 12px;
+    background: var(--bg-elevated); border: 1px solid var(--border-dim);
+    border-radius: 6px; padding: 5px 10px; outline: none; width: 180px;
+    color: var(--text-primary); transition: border-color 0.15s;
+}
+.ste-search:focus { border-color: rgba(124,92,62,0.25); }
+.ste-search::placeholder { color: var(--text-muted); }
+.ste-save-btn {
+    font-family: 'Noto Sans KR', sans-serif; font-size: 13px; font-weight: 600;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; padding: 6px 18px; cursor: pointer;
+    box-shadow: 0 1px 4px rgba(124,92,62,0.25); transition: 0.15s;
+}
+.ste-save-btn:hover { background: #63492F; }
+.ste-save-btn:disabled { background: var(--text-muted); cursor: default; box-shadow: none; }
+.ste-save-status {
+    font-size: 12px; color: #16A34A; font-weight: 500;
+    opacity: 0; transition: opacity 0.3s;
+}
+
+/* 세그먼트 목록 */
+.ste-panel {
+    overflow-y: auto; padding: 16px 40px 80px;
+    scroll-behavior: smooth;
+    max-height: calc(100vh - 200px);
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.ste-panel::-webkit-scrollbar { width: 5px; }
+.ste-panel::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
+
+.ste-row {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(229,226,220,0.5);
+    transition: background 0.12s;
+    border-radius: 6px;
+    margin-bottom: 2px;
+}
+.ste-row:hover { background: rgba(124,92,62,0.03); }
+.ste-row.active { background: rgba(124,92,62,0.1); }
+.ste-row.modified .ste-text {
+    border-color: rgba(217,119,6,0.3);
+    background: rgba(217,119,6,0.08);
+}
+.ste-row.highlight { background: rgba(22,163,74,0.06); }
+
+.ste-ts {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--text-muted); min-width: 40px; padding-top: 9px;
+    cursor: pointer; flex-shrink: 0; user-select: none;
+    transition: color 0.12s;
+}
+.ste-ts:hover { color: var(--accent); }
+.ste-row.active .ste-ts { color: var(--accent); font-weight: 600; }
+
+.ste-text {
+    flex: 1; min-width: 0; width: 100%; font-size: 14px; line-height: 1.65;
+    color: var(--text-primary); background: transparent;
+    border: 1px solid transparent; border-radius: 6px;
+    padding: 6px 8px; resize: none; overflow: hidden;
+    overflow-wrap: break-word; word-break: break-word;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: border-color 0.15s, background 0.15s;
+    min-height: 36px;
+}
+.ste-text:focus {
+    outline: none; border-color: rgba(124,92,62,0.25);
+    background: var(--bg-elevated);
+    box-shadow: 0 0 0 3px rgba(124,92,62,0.07);
+}
+
+.ste-row.modified .ste-ts { color: #D97706; }
+
+/* ========== 플로팅 자막 ========== */
+#subtitle-box {
+    position: fixed;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--z-subtitle);
+    background: rgba(28,25,23,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 10px 18px;
+    max-width: 680px;
+    width: 90vw;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    transition: opacity 0.2s;
+    cursor: default;
+    user-select: none;
+}
+#subtitle-box.dragging { opacity: 0.85; transition: none; }
+#subtitle-box.hidden { display: none; }
+#subtitle-box.text-only {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+}
+#subtitle-box.text-only #subtitle-text {
+    color: var(--text-primary);
+    text-shadow: 0 0 8px var(--bg-void), 0 0 16px var(--bg-void);
+}
+
+/* PC 드래그 모드 */
+#subtitle-box.free {
+    transform: none;
+    cursor: grab;
+    resize: both;
+    overflow: hidden;
+    min-width: 200px;
+    min-height: 40px;
+}
+#subtitle-box.free:active { cursor: grabbing; }
+
+#subtitle-text {
+    color: #F0EDE8;
+    font-size: 1rem;
+    line-height: 1.6;
+    pointer-events: none;
+}
+#subtitle-text:empty::after {
+    content: '';
+}
+#subtitle-box:has(#subtitle-text:empty) {
+    opacity: 0;
+    pointer-events: none;
+}
+#subtitle-box:has(#subtitle-text:not(:empty)) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 자막 컨트롤 */
+#sub-controls {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    z-index: calc(var(--z-subtitle) + 1);
+    display: flex;
+    gap: 3px;
+    flex-direction: row;
+}
+.sub-ctrl-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(28,25,23,0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #D6D3D1;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.15s;
+}
+.sub-ctrl-btn:hover {
+    background: rgba(28,25,23,0.9);
+    color: #fff;
+}
+.sub-ctrl-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+}
+
+@media (max-width: 900px) {
+    #subtitle-box { max-width: 95vw; width: 95vw; padding: 8px 14px; border-radius: 8px; bottom: 56px; }
+    #subtitle-box.free {
+        cursor: default; resize: none;
+        left: 50% !important; transform: translateX(-50%) !important;
+        width: 95vw !important;
+    }
+    #sub-controls { bottom: 14px; left: 14px; }
+    .sub-ctrl-btn { width: 30px; height: 30px; font-size: 12px; }
+    #slide-container { padding-bottom: 140px !important; }
+}
+
+/* ========== 모바일 네비게이션 FAB 그룹 ========== */
+#mobile-fab-group {
+    display: none;
+    position: fixed;
+    bottom: 20px; right: 18px;
+    z-index: var(--z-fab);
+    gap: 8px;
+    align-items: center;
+}
+@media (max-width: 900px) {
+    #mobile-fab-group { display: flex; bottom: 14px; }
+}
+.nav-fab {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.15);
+    transition: var(--transition);
+    display: flex; align-items: center; justify-content: center;
+}
+.nav-fab:hover {
+    background: var(--border-dim);
+    color: var(--text-primary);
+}
+.nav-fab:active { transform: scale(0.93); }
+#index-fab {
+    display: none;
+    position: relative;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(var(--accent-rgb),0.2);
+    transition: var(--transition);
+    align-items: center; justify-content: center;
+}
+#index-fab:hover {
+    background: var(--accent-bright);
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb),0.2);
+}
+@media (max-width: 900px) {
+    #index-fab { display: flex; }
+}
+
+#index-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    z-index: var(--z-overlay);
+    background: rgba(28,25,23,0.35);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+#index-overlay.open { display: flex; justify-content: flex-end; }
+
+#index-overlay-panel {
+    width: min(300px, 85vw);
+    height: 100%;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-dim);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-dim) transparent;
+    animation: slideInRight 0.2s ease-out;
+}
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+#index-overlay-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-dim);
+}
+#index-overlay-header span {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+}
+#index-overlay-close {
+    background: transparent; border: none;
+    color: var(--text-muted); font-size: 20px;
+    cursor: pointer; padding: 4px 8px;
+    border-radius: 6px;
+    transition: var(--transition);
+}
+#index-overlay-close:hover {
+    background: var(--border-dim); color: var(--text-primary);
+}
+#index-overlay-list .index-item {
+    padding: 10px 16px;
+}
+/* ========== 편집 모드 ========== */
+.edit-bar {
+    display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: #FFF3E0; border-bottom: 2px solid #F9A825;
+    padding: 8px 20px; gap: 10px;
+    align-items: center; justify-content: space-between;
+    font-size: 13px; color: #E65100;
+}
+.edit-bar.visible { display: flex; }
+.edit-bar-label { font-weight: 600; }
+.edit-bar-actions { display: flex; gap: 8px; align-items: center; }
+.edit-save-status { font-size: 12px; color: #16A34A; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
+.edit-save-status.pending { opacity: 1; color: #E65100; }
+.edit-save-error { font-size: 12px; color: #DC2626; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
+.edit-bar button {
+    padding: 6px 16px; border-radius: 6px; border: none;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.btn-save { background: #F9A825; color: #fff; }
+.btn-save:hover { background: #F57F17; }
+.btn-cancel { background: #fff; color: #888; border: 1px solid #ddd; }
+.btn-cancel:hover { background: #f5f5f5; }
+/* 매핑 편집 컨트롤 바 (교안 편집 모드 전용) */
+.mapping-bar {
+    display: none;
+    margin: 12px 0;
+    padding: 10px 14px;
+    background: #fff8e1;
+    border: 1px solid #ffca28;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #5d4037;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.mapping-bar.active { display: flex; }
+.mapping-bar .mb-icon { flex-shrink: 0; opacity: 0.7; }
+.mapping-bar .mb-label { font-weight: 600; }
+.mapping-bar .mb-range { font-family: monospace; color: #6d4c41; }
+.mapping-bar .mb-range.empty { color: #bf360c; font-style: italic; }
+.mapping-bar button {
+    padding: 6px 12px;
+    border: 1px solid #ffb300;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #5d4037;
+}
+.mapping-bar button:hover:not(:disabled) { background: #fff3e0; }
+.mapping-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+#slide-content[contenteditable="true"] {
+    outline: 2px dashed rgba(249,168,37,0.4);
+    outline-offset: 4px; border-radius: 4px;
+    min-height: 100px;
+}
+/* ========== 메모 패널 ========== */
+.memo-panel {
+    margin-top: 24px; padding: 16px; border-radius: var(--radius);
+    background: #F5F9FF; border: 1px solid #BBDEFB;
+}
+.memo-header {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    color: #1565C0; margin-bottom: 0;
+}
+.memo-header svg { flex-shrink: 0; }
+.memo-panel.has-memo .memo-header { margin-bottom: 10px; }
+.memo-body { display: none; }
+.memo-panel.open .memo-body { display: block; }
+.memo-text {
+    width: 100%; min-height: 40px; padding: 10px; border: 1px solid #BBDEFB;
+    border-radius: 6px; font-size: 13px; line-height: 1.6;
+    background: #fff; color: var(--text-secondary); resize: none;
+    overflow: hidden; font-family: inherit; box-sizing: border-box;
+    display: block;
+}
+.memo-text:focus { outline: none; border-color: #42A5F5; }
+.memo-text[readonly] { background: #FAFAFA; cursor: default; }
+.memo-saved {
+    font-size: 11px; color: #888; margin-top: 6px;
+    opacity: 0; transition: opacity 0.3s;
+}
+.memo-saved.visible { opacity: 1; }
+
+</style>
+</head>
+<body>
+<div id="sc-loading-overlay"><div class="spinner"></div></div>
+<div id="app">
+  <div id="player-header">
+  <div id="audio-bar">
+    <audio id="audio" src="https://pub-2cc563566fbd4c11ad921ebb5ef1237f.r2.dev/skill-status-design/17.m4a" preload="auto"></audio>
+    <div id="audio-controls">
+      <a href="/" class="hub-btn" title="목록으로"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></a>
+      <span id="time-display">0:00 / 0:00</span>
+      <input type="range" id="seek-bar" min="0" max="86400" value="0" step="0.1">
+      <select id="speed-select" onchange="changeSpeed(this.value)">
+        <option value="0.5">0.5x</option>
+        <option value="0.75">0.75x</option>
+        <option value="1" selected>1.0x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="1.75">1.75x</option>
+        <option value="2">2.0x</option>
+      </select>
+      <div class="playback-group">
+        <button class="skip-btn" onclick="skipTime(-10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="2.5" height="12" rx="1" fill="currentColor"/><path d="M13 1.5L5 7L13 12.5V1.5Z" fill="currentColor"/></svg></button>
+        <button id="play-btn" onclick="togglePlay()"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg></button>
+        <button class="skip-btn" onclick="skipTime(10)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1.5L9 7L1 12.5V1.5Z" fill="currentColor"/><rect x="10.5" y="1" width="2.5" height="12" rx="1" fill="currentColor"/></svg></button>
+      </div>
+    </div>
+    <div id="audio-map"></div>
+  </div>
+  <div id="slide-nav"></div>
+  </div>
+  <div id="subtitle-edit-area" style="display:none">
+    <div class="subtitle-edit-toolbar">
+      <div class="ste-left">
+        <span class="ste-change-badge" id="ste-change-badge">0개 수정됨</span>
+      </div>
+      <div class="ste-right">
+        <input type="text" class="ste-search" id="ste-search" placeholder="세그먼트 검색…" autocomplete="off">
+        <span class="ste-save-status" id="ste-save-status">저장됨</span>
+        <button class="ste-save-btn" id="ste-save-btn" disabled>저장</button>
+      </div>
+    </div>
+    <div class="ste-panel" id="ste-panel"></div>
+  </div>
+  <div id="main-layout">
+    <div id="slide-area">
+      <div id="slide-container">
+        <div id="slide-header">
+          <span id="slide-id"></span>
+          <span id="slide-badge"></span>
+        </div>
+        <h1 id="slide-title"></h1>
+        <div id="mapping-bar" class="mapping-bar" style="display:none">
+          <svg class="mb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 10v3"/>
+            <path d="M6 6v11"/>
+            <path d="M10 3v18"/>
+            <path d="M14 8v7"/>
+            <path d="M18 5v13"/>
+            <path d="M22 10v3"/>
+          </svg>
+          <span class="mb-label" id="mb-section-id">—</span>
+          <span class="mb-range" id="mb-range">—</span>
+          <button class="mb-set-start" id="mb-set-start">시작을 현재 시점으로</button>
+          <button class="mb-set-end" id="mb-set-end">끝을 현재 시점으로</button>
+        </div>
+        <div id="slide-content"></div>
+      </div>
+    </div>
+    <div id="index-panel">
+      <div id="index-header">17. 스킬과 상태이상 : 목차</div>
+      <div id="index-list"></div>
+    </div>
+  </div>
+</div>
+<div id="mobile-fab-group">
+  <button class="nav-fab" id="nav-prev" onclick="showSlide(currentSlide-1);isAutoSync=false" title="이전"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <button class="nav-fab" id="nav-next" onclick="showSlide(currentSlide+1);isAutoSync=false" title="다음"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+  <button id="index-fab" onclick="openOverlay()" title="목차"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+</div>
+<div id="index-overlay" onclick="if(event.target===this)closeOverlay()">
+  <div id="index-overlay-panel">
+    <div id="index-overlay-header">
+      <span>17. 스킬과 상태이상 : 목차</span>
+      <button id="index-overlay-close" onclick="closeOverlay()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div id="index-overlay-list"></div>
+  </div>
+</div>
+<div id="subtitle-box" class="pos-bottom">
+  <span id="subtitle-text"></span>
+</div>
+<div id="sub-controls">
+  <button class="sub-ctrl-btn" id="sub-pos-btn" title="위치 변경"><span id="sub-pos-icon"></span></button>
+  <button class="sub-ctrl-btn" id="sub-size-up" title="글자 크게">A+</button>
+  <button class="sub-ctrl-btn" id="sub-size-dn" title="글자 작게">A-</button>
+  <button class="sub-ctrl-btn" id="sub-hide-btn" title="자막 숨기기">CC</button>
+</div>
+<script>
+const SLIDES = [
+  {
+    "id": "P1",
+    "title": "스킬 없이 게임을 하면?",
+    "content": "<div class=\"slide-text\">스킬은 단순한 기능이 아니다</div>\n<div class=\"slide-text\">전투의 리듬, 플레이어의 표현, 게임의 깊이 그 자체다</div>",
+    "hasAudio": true,
+    "start": 0.0,
+    "end": 118.6
+  },
+  {
+    "id": "P2",
+    "title": "스킬",
+    "content": "<div class=\"slide-text\">스킬이란 플레이어가 캐릭터를 통해 발동하는 능동적 행위로, 전투/탐험/상호작용 전반에 걸쳐 플레이의 깊이와 다양성을 만들어내는 핵심 요소다</div>\n<div class=\"slide-text\">**[구성 요소]<br>애니메이션**: 스킬 발동 시 재생되는 캐릭터 모션. 타이밍과 연출이 몰입감에 직결된다<br><strong>비주얼 이펙트(VFX</strong>): 발동 순간 화면에 표현되는 시각적 연출. 스킬의 성격과 강도를 직관적으로 전달한다<br><strong>사운드</strong>: 타격감과 몰입감을 높이는 음향 효과. 시각 연출과 함께 스킬의 ‘느낌’을 완성한다<br><strong>데이터</strong>: 데미지, 쿨타임, 마나 소모, 사거리 등 스킬의 동작을 정의하는 수치 정보</div>\n<div class=\"slide-text\">**[사용 방식]<br>액티브(Active)**: 플레이어가 직접 키 입력을 통해 발동. 전략적 판단과 조작 실력이 요구된다<br><strong>패시브(Passive)</strong>: 습득 후 특정 조건이 충족되면 자동으로 발동. 캐릭터의 기본 성능을 강화하는 역할을 한다</div>",
+    "hasAudio": true,
+    "start": 118.6,
+    "end": 194.28
+  },
+  {
+    "id": "P3",
+    "title": "게임 디자인의 중요성",
+    "content": "<div class=\"slide-text\">버튼 하나를 누르는 순간, 플레이어는 세계에 개입한다</div>\n<div class=\"slide-text\">스킬은 그 개입의 언어. 얼마나 강렬하고, 얼마나 다채롭게 설계하느냐가 게임의 기억을 결정한다</div>\n<div class=\"slide-card\"><div class=\"card-heading\">전투의 재미</div><div class=\"card-desc\">스킬의 타이밍, 조합, 연출이 전투에 리듬을 부여한다. 단순한 공격이 아닌, 판단과 실력이 빛나는 순간을 만들어낸다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">캐릭터 개성</div><div class=\"card-desc\">같은 게임이라도 어떤 스킬을 쓰느냐에 따라 플레이 스타일이 달라진다. 스킬은 캐릭터의 정체성을 가장 직접적으로 드러내는 요소이다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">성장 체감</div><div class=\"card-desc\">새로운 스킬을 습득하는 순간, 플레이어는 성장을 눈으로 확인한다. 스킬 트리는 단순한 수치 상승이 아닌, 가능성의 확장이다.</div></div>",
+    "hasAudio": false,
+    "start": null,
+    "end": null
+  },
+  {
+    "id": "P4",
+    "title": "스킬의 구분",
+    "content": "<div class=\"slide-text\">해당 강의에서는 생산 등 비 전투형 스킬은 다루지 않는다.</div>\n<div class=\"slide-text\">**[발동 타입]<br>인스턴트(Instant)**: 입력 즉시 효과 발동. 반응 속도가 핵심. 일반적인 발동 형태<br><strong>캐스팅(Casting)</strong>: 일정 시간 경과 후 발동. 선딜레이 동안 취약점 발생. 보통 캐스팅 바가 표시<br><strong>차징(Charging)</strong>: 충전 시간에 따라 위력이 달라지는 발동 방식. 누르고 있는 시간이 길어질 수록 위력이 상승<br><strong>채널링(Channeling)</strong>: 유지하는 동안 지속적으로 효과 적용. 중단 시 효과 소멸, 이동이나 공격을 맞으면 중단</div>\n<div class=\"slide-text\">**[타겟 & 범위]<br>타겟팅**: 특정 대상을 클릭하거나 선택하여 발동. 명중이 보장되므로 안정적이지만, 대상이 없으면 사용 불가. 단일 대상 스킬에 주로 사용<br><strong>논 타겟팅</strong>: 방향 또는 위치를 기준으로 발동. 대상 없이도 사용 가능하지만 빗나갈수 있음. 조준 실력이 결과를 좌우하며, 회피 가능성이 있어 전략적 깊이를 더함<br><strong>광역(AoE, Area of Effect)</strong>:  지정된 범위 내 모든 대상에게 동시 적용. 원형/부채꼴/직선 등 다양한 형태로 구현되며, 다수전에서 강력한 효과를 발휘. 아군 피해 부여도 설계 시 반드시 고려해야 함</div>\n<div class=\"slide-card\"><div class=\"card-heading\">[역할]</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">공격</div><div class=\"card-desc\">: 적에게 직접 피해를 가하는 가장 기본적인 역할. 단일 타격, 연속 타격, 도트(Dot) 피해 등 다양한 형태로 구현되며, 데미지 계산 방식(물리/마법/고정)도 함께 정의해야 함</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">버프/디버프</div><div class=\"card-desc\">: 아군의 능력치를 일시적으로 강화(버프)하거나 적의 능력치를 약화(디버프)시키는 스킬. 지속시간, 중복 여부, 해제 조건 등 별도 설계 필요. 전투 밸런스에 직접적인 영향</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">회복</div><div class=\"card-desc\">: HP/마나/스태미나 등 소모된 자원을 되돌리는 스킬. 즉시 회복과 지속 회복(HoT) 방식으로 나뉘며, 전투 지속력과 파티 생존율에 직결됨</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">소환</div><div class=\"card-desc\">: 독립적으로 행동하는 개체(소환수/함정/오브젝트 등)를 생성해 전투력을 증폭시키는 스킬. 소환물의 AI, 어그로 처리, 지속 시간, 최대 소환 수 등 별도 구조 설계가 반드시 필요함</div></div>",
+    "hasAudio": true,
+    "start": 194.28,
+    "end": 287.24
+  },
+  {
+    "id": "P5",
+    "title": "스킬 설계 시 체크사항",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">역할과 구조의 명확한 구분</div><div class=\"card-desc\">상위/하위 클래스로 나누어 데이터량을 절약할 수 있는지, 혹은 복잡한 기능을 위해 데이터 사이즈를 늘려야 하는지 판단이 필요하다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex)</div><div class=\"card-desc\">“타겟팅한 적 1인에게 즉시 데미지 + 1초 간 주변 1m 내 적에게 Stun + 독 데미지” - 이처럼 복합 효과는 클래스 분리를 요구한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">플레이 환경 고려</div><div class=\"card-desc\">특히 멀티플레이어 환경에서 특정 스킬이 지나치게 강하거나 쓸모없어지는 상황을 사전에 방지해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex)</div><div class=\"card-desc\">“적 HP 5%를 무조건 감소”하는 스킬을 20명 공대원 모두가 들고 레이드에 간다면? 밸런스 붕괴를 초래한다.</div></div>\n<div class=\"slide-note\"><div class=\"note-content\">멀티 플레이어 환경에서는 다수의 사용자들이 동일한 스킬을 동시에 사용할 경우를 항상 고려해야 한다.</div></div>",
+    "hasAudio": true,
+    "start": 287.24,
+    "end": 340.8
+  },
+  {
+    "id": "P6",
+    "title": "투사체 설계",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">스킬과 투사체는 반드시 역할을 분리해 설계</div><div class=\"card-desc\">투사체를 별도 클래스로 독립시키면 유지보수성과 확장성이 크게 확장된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">스킬 클래스는 투사체의 생성만 담당</div><div class=\"card-desc\">이동/폭발 등 실제 동작 로직은 별도 클래스와 스크립트로 분리해야 재사용성이 높아지고 디버깅이 수월해진다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">스킬 클래스는 투사체의 ID/개수/생성 타이밍만 제어</div><div class=\"card-desc\">크기/이동 거리/궤적/폭발 범위 등 세부 동작은 투사체 전용 테이블과 스크립트에서 관리해 투사체가 독립적으로 작동하도록 설계해야 한다. 이 구조를 따르면 동일한 동작 방식의 투사체를 중복 제작할 필요가 없어지고, 새로운 스킬 추가 시 기존 투사체를 그대로 재활용할 수 있다.</div></div>",
+    "hasAudio": true,
+    "start": 340.8,
+    "end": 392.32
+  },
+  {
+    "id": "P7",
+    "title": "소환물 설계",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">투사체 설계와 유사한 프로세스</div><div class=\"card-desc\">소환물 설계도 투사체와 동일한 분리 원칙을 따른다. 스킬 클래스는 어떤 소환물을(ID), 몇 개를(개수), 언제 생성할지(타이밍)만 결정한다. 소환물이 실제로 어떻게 이동하고, 어떤 대상을 공격하며, 어떤 조건에서 사라지는지는 소환물 전용 클래스와 스크립트에서 독립적으로 처리한다. 이 구조 덕분에 동일한 소환물을 여러 스킬에서 재사용할 수 있고, 소환물의 동작을 수정할 때 스킬 클래스를 건드릴 필요가 없어진다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">어그로 규칙 설정 필수</div><div class=\"card-desc\">소환물의 어그로 처리는 설계 초기에 반드시 명확히 정의해야 한다. 크게 세 가지 방식 중 하나를 선택한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">첫째</div><div class=\"card-desc\">, 독립적으로 어그로를 끄는 방식. 적이 소환물을 별도 대상으로 인식하고 공격한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">둘째</div><div class=\"card-desc\">, 주인의 어그로 수치에 합산되는방식. 소환물이 가한 피해가 주인의 위협도로 계산된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">셋째</div><div class=\"card-desc\">, 어그로를 전혀 생성하지 않는 방식. 순수 보조 역할에 적합하다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">AI 구조 설계</div><div class=\"card-desc\">소환물은 플레이어가 직접 조작하지 않는 만큼, 몬스터와 동일한 수준의 AI 구조 설계가 필요하다. 구체적으로 다음 항목들을 반드시 정의해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">이동 방식</div><div class=\"card-desc\">: 주인을 따라다니는가, 제자리를 지키는가, 적을 추적하는가</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">공격 판정</div><div class=\"card-desc\">: 사거리/공격 속도/피해량은 어떻게 계산되는가, 몬스터 테이블과 구조를 공유할 수 있는가</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">타겟 선정 로직</div><div class=\"card-desc\">: 가장 가까운 적을 공격하는가, 주인이 공격 중인 대상을 우선하는가, 별도 우선순위 규칙이 있는가</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">소멸 조건</div><div class=\"card-desc\">: 지속 시간 만료, HP 소진, 주인 사망 등 소환물이 사라지는 조건을 명확히 정의해야 한다. 이 구조를 몬스터 AI와 최대한 공유하면 개발 비용을 크게 줄일 수 있다.</div></div>",
+    "hasAudio": true,
+    "start": 392.32,
+    "end": 438.96
+  },
+  {
+    "id": "P8",
+    "title": "상태 이상 설계",
+    "content": "<div class=\"slide-text\">Stun, Blind, Sleep, Slience… 복수의 상태 이상이 동시에 적용될 때 어떻게 처리할 것인가?</div>\n<div class=\"slide-text\">이는 설계의 핵심 과제이다.</div>",
+    "hasAudio": true,
+    "start": 438.96,
+    "end": 453.48
+  },
+  {
+    "id": "P9",
+    "title": "상태 이상 시나리오",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">시나리오 1: 복수의 상태 이상 동시 적용</div><div class=\"card-desc\">내 캐릭터가 Blind 2초, Stun 1초, Silence 1.5초를 동시에 맞았다. 2초 동안 캐릭터는 어떤 상태가 되어야 할까? 각 시점별로 설명하라</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시나리오 2: 상태 이상 위의 상태 이상</div><div class=\"card-desc\">내 캐릭터가 Sleep 10초에 걸려 있다. 이 상태에서 누군가 Stun 1초를 추가로 걸었다. 1초 후 캐릭터의 상태는 어떻게 되어야 할까? 우선순위와 처리 방식을 설명하라</div></div>",
+    "hasAudio": true,
+    "start": 453.48,
+    "end": 489.56
+  },
+  {
+    "id": "P10",
+    "title": "상태 이상 설계 시 체크사항",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">모든 상태 이상 종류 정리</div><div class=\"card-desc\">Stun/Blind/Silence/Sleep/Curse/Knockback 등 게임 내 모든 상태이상을 별도 테이블로 관리한다. 각 항목은 고유 ID, 효과, 지속 시간, 해제 조건을 포함하며, 추후 추가되는 상태 이상도 동일한 구조로 등록해 일관성을 유지한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">복수 상태 이상의 동시 적용 설계</div><div class=\"card-desc\">단일 값이 아닌 리스트 구조(상태 이상 ID + 남은 시간)로 테이블을 설계한다. 매 틱마다 시간이 차감되고, 0이 되면 해당 항목이 자동 제거된다. 이 구조로 복수 상태 이상의 동시 적용/해제를 일관되게 처리할 수 있다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">중복 처리 규칙 결정</div><div class=\"card-desc\">같은 상태이상이 중복될 때 세 가지 방식 중 하나를 상태 이상별로 정의한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시간 갱신(Refresh)</div><div class=\"card-desc\">: 남은 시간을 덮어씀. Stun 등 강한 제어기에 적합</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">누적(Stack)</div><div class=\"card-desc\">: 시간 합산 또는 효과 강도 증가. 누적 횟수 상한 필요</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">무시(Ignore)</div><div class=\"card-desc\">: 중복 적용 차단. Sleep 등 피격 해제형에 적합</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">지속 시간 및 해제 방법 정의</div><div class=\"card-desc\">지속 시간은 스킬 테이블에서 관리한다.(같은 Stun도 스킬마다 다를 수 있음) 해제 조건은 상태 이상별로 명시하며, 주요 유형은 다음과 같다. 시간 경과/피격(Sleep 등)/해제 마법/아이템/특정 행동/사망 시 초기화 여부. 해제 조건이 복수인 경우 둘 중 하나만 만족해도 되는지 둘 다 만족해야 되는지(OR/AND)에 대한 처리 방식도 함께 정의해야 한다.</div></div>",
+    "hasAudio": true,
+    "start": 489.56,
+    "end": 543.6
+  },
+  {
+    "id": "P11",
+    "title": "버프(Buff)와 디버프(Debuff)",
+    "content": "<div class=\"slide-text\">긍정적 효과와 부정적 효과가 동시에 작용할 때, 시스템은 어떤 우선순위로 처리해야 할까?</div>",
+    "hasAudio": true,
+    "start": 543.6,
+    "end": 554.6
+  },
+  {
+    "id": "P12",
+    "title": "버프 중복 시나리오",
+    "content": "<div class=\"slide-text\">버프 중복 처리 규칙을 설계하기 전에, 다음 상황을 먼저 분석해보자</div>\n<div class=\"slide-text\">내  캐릭터가 공격 속도 +10% 물약을 마셨다.<br>이후 동료가 공격 속도 +20% 버프를 걸어주었고,<br>다른 동료는 공격 속도 +5% 오라를 상시 발산하고 있다.</div>\n<div class=\"slide-card\"><div class=\"card-heading\">세 버프가 모두 독립 적용된다면?</div><div class=\"card-desc\">최종 공격 속도는 기본값의 몇%가 되어야 하는가?</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">같은 종류의 버프로 그룹화 한다면?</div><div class=\"card-desc\">가장 높은 버프만 적용할 것인가, 모두 합산할 것인가?</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">곱연산 vs 합연산 적용 순서는?</div><div class=\"card-desc\">%기반버프의 적용되는 기준 값(기본 공격력? 무기 포함?)은 무엇인가?</div></div>",
+    "hasAudio": true,
+    "start": 554.6,
+    "end": 595.68
+  },
+  {
+    "id": "P13",
+    "title": "디버프 복합 계산",
+    "content": "<div class=\"slide-text\">LoL의 실제 아이템 효과를 기반으로 한 복합 데미지 계산 시나리오</div>\n<div class=\"slide-card\"><div class=\"card-heading\">상황 설정</div><div class=\"card-desc\">내 캐릭터: 마방 0, HP 1000 0.5초 간격으로 티모 버섯 3개를 연속 밟음 버섯 효과: 초당 50 마법 피해 x 4초 티모 아이템: 리안드리의 고통 장착</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">리안드리의 고통 효과</div><div class=\"card-desc\">스킬 공격 시 현재 체력의 2% 추가 마법 피해 (3초에 걸쳐) 이속 감소 상태이면 추가 피해 2배 적용</div></div>\n<div class=\"slide-text\">초당 받는 총 피해량과 이동 속도 감소 상태는 어떻게 계산되어야 할까?</div>\n<div class=\"slide-note\"><div class=\"note-content\"><strong>[계산]</strong><br>버섯 1개 기준 피해 계산(밟는 순간 HP - 1000):<br>1. 버섯 기본 피해: 초당 50 x 4초 = 총 200 피해(4초에 걸쳐 분산)<br>2. 리안드리 추가 피해(현재 체력의 2%, 3초에 걸쳐):<br>- 밟는 순간 현재 체력 기준 → 1000 x 2% = 20 추가 피해(3초 분산)<br>- 버섯은 이속 감소 효과 포함 → 이속 감소 상태이므로 추가 피해 2배 적용 → 20 x 2 = 40 추가 피해<br>3. 버섯 1개당 총 피해: 200 + 40 = 240<br><strong>버섯 3개를 0.5초 간격으로 밟을 경우</strong><br>- 각 버섯의 피해가 독립적으로 중첩 적용됨<br>- 단, 리안드리 피해는 밟는 시점의 현재 체력 기준으로 계산되므로, 두 번째/세 번째 버섯을 밟을 때는 이미 HP가 감소한 상태 → 추가 피해 수치도 줄어듦<br>- 이처럼 “현재 체력 기준” 피해는 매 적용 시점마다 기준값이 달라지므로, 중첩 계산 시 순서와 타이밍이 결과에 영향을 미침<br><strong>핵심 설계 포인트</strong><br>- 동일 효과의 중첩 적용 여부 (버섯 3개가 각각 독립 스택인가?)<br>- 리안드리 피해의 기준 시점 (적용 시작 시 체력? 매 틱 체력?)<br>- 이속 감소 판정 시점 (버섯 밟는 순간? 매 틱?)<br>이 세가지를 명확히 정의하지 않으면 구현마다 결과가 달라진다.</div></div>",
+    "hasAudio": true,
+    "start": 595.68,
+    "end": 671.92
+  },
+  {
+    "id": "P14",
+    "title": "버프와 디버프의 충돌",
+    "content": "<div class=\"slide-quote\">이동속도를 낮추는 <strong>Slow 디버프</strong>가 걸린 상태에서,<br>이동 속도를 높이는 <strong>Haste 버프</strong>가 추가로 걸린다면?</div>\n<div class=\"slide-card\"><div class=\"card-heading\">Case A: 독립 유지</div><div class=\"card-desc\">두 효과가 각각 별도 테이블에 독립적으로 존재하며, 매 틱마다 수치를 합산해 최종 값을 계산한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex)</div><div class=\"card-desc\">Slow -30, Haste +20% → 최종 이동 속도 = 100 x (1-0.1) = 90 한쪽이 먼저 만료되면 나머지 효과만 자동 반영된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Case B: 덮어쓰기</div><div class=\"card-desc\">절댓값이 더 큰 효과만 활성화되고, 약한 효과는 무시 또는 제거된다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex)</div><div class=\"card-desc\">Slow -30%, Haste +20% → Slow 우선 적용, 최종 이동속도 = 70 강한 효과 만료 후 약한 효과의 부활 여부도 반드시 정의해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Case C: 그룹 분리</div><div class=\"card-desc\">버프/디버프를 별도 그룹으로 분리해 각각 합산한 뒤, 두 결과를 곱해 최종 값을 계산한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex)</div><div class=\"card-desc\">버프 +20%, 디버프 -30% -< 100 x 1.2 x 0.7 = 84 그룹 간 최종 합산 방식(덧셈 vs 곱셈)을 설계 초기에 명확히 정의해야 한다.</div></div>\n<div class=\"slide-text\">→ 보통 <strong>Case A</strong>로 처리된다!</div>",
+    "hasAudio": true,
+    "start": 671.92,
+    "end": 702.64
+  },
+  {
+    "id": "P15",
+    "title": "버프 설계 시 체크사항 (1)",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">별도 테이블로 관리</div><div class=\"card-desc\">모든 버프/디버프를 별도 테이블로 정의하고, 캐릭터에 적용중인 효과는 (ID + 남은 시간) 리스트로 관리한다. 테이블 필수 항목: 고유 ID, 효과 종류, 수치, 지속 시간, 출처 그룹, 해제 조건. 이 구조를 갖추면 새 버프/디버프 추가 시 테이블에 행 하나만 추가하면 되므로, 코드 수정 없이 확장이 가능하다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">중복 수신 처리 규칙</div><div class=\"card-desc\">같은 버프를 두 번 받을 때 버프별로 처리 방식을 정의해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">시간 갱신(Refresh)</div><div class=\"card-desc\">: 수치 유지, 남은 시간만 초기화</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">누적(Stack)</div><div class=\"card-desc\">: 수치 또는 시간 합산. Max Stack 상한 필수</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">무시(Ignore)</div><div class=\"card-desc\">: 중복 적용 차단. 무적 등 고정 효과에 적합 버프 테이블에 처리 규칙과 최대 중복 횟수를 함께 정의해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">기준 값과 적용 순서 결정</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">기준 값(Base Value) 정의</div><div class=\"card-desc\">: +10% 공격력 버프의 기준을 무엇으로 삼느냐에 따라 결과가 달라진다.</div></div>\n<ul class=\"slide-points\"><li>맨손 기준: 100 x 1.1 +50 +20 = 180</li><li>무기 장착 후 기준 (100+50) x 1.1 + 20 = 185 <strong>적용 순서</strong>: 덧셈/곱셈 버프가 혼재할 경우 순서에 따라 결과가 달라진다. 덧셈 먼저, 곱셈 먼저, 곱셈 중첩(1.1 x 1.2 = 1.32) 중 하나를 게임 전체에서 일관되게 정의하고 문서화하라</li></ul>",
+    "hasAudio": true,
+    "start": 702.64,
+    "end": 721.84
+  },
+  {
+    "id": "P16",
+    "title": "버프 설계 시 체크사항 (2)",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">버프 출처 구분</div><div class=\"card-desc\">출처마다 중복 적용 규칙과 우선순위가 달라지므로, 반드시 출처별로 분류해 관리해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">스킬</div><div class=\"card-desc\">: 직접 발동, 중복 적용 여부 별도 정의 필요</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">아이템(물약/스크롤)</div><div class=\"card-desc\">: 동일 계열 중복 허용 여부 및 상위 덮어쓰기 결정</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">이벤트/PC방</div><div class=\"card-desc\">: 자동 부여. 일반 버프와 별도 그룹 관리</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">퀘스트 보상</div><div class=\"card-desc\">: 중복 수령 방지 로직 필요</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">종족/길드 보상</div><div class=\"card-desc\">: 패시브 상시 적용. 탈퇴 시 즉시 해제 여부 정의</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">그룹화와 덮어쓰기</div><div class=\"card-desc\">버프를 출처/효과 유형별로 그룹화하고, 버프 테이블에 <strong>그룹 ID</strong>와 <strong>우선순위(Priority)</strong>를 포함해야 한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Lv1 방패(+10) 적용 중 → Lv3 방패(+20) 수신</div><div class=\"card-desc\">: 상위 버프로 즉시 교체. 최종 +20</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Lv3 방패(+20) 적용 중 → Lv1 방패(+10) 수신</div><div class=\"card-desc\">: 하위 버프 무시. 최종 +20 유지</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">추가 정의 필요 사항</div></div>\n<ul class=\"slide-points\"><li>그룹이 다른 버프(스킬 vs 아이템)는 독립 적용 or 합산 여부</li><li>덮어쓰기 시 기존 지속 시간 승계 or 초기화 여부</li><li>동일 우선순위 충돌 시 나중 버프 우선 or 먼저 받은 버프 유지 여부</li></ul>\n<div class=\"slide-card\"><div class=\"card-heading\">해제 후 능력치 복원</div><div class=\"card-desc\">기본 HP +200 HP +100 버프 → 최대 HP 300. 피격 후 현재 HP 99. <strong>버프 해제 시</strong>:</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">방식 A(비율 유지)</div><div class=\"card-desc\">: 99/300 x 200 = 66 → HP 66 (자연스럽지만 계산 복잡)</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">방식 B(차감 복원)</div><div class=\"card-desc\">: 99 - 100 = -1 → HP 0 이하. 사망 처리 or HP 1 고정 예외 처리 필수</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">방식 C(현재 HP 유지)</div><div class=\"card-desc\">: HP 99 유지, 최대 HP만 200 복원  (구현 단순) 세 방식 중 정답은 없다. 게임 전체에서 하나를 일관되게 적용하고, HP, 마나, 스태미나 등 모든 임시 자원 버프에 동일한 로직을 사용해야 한다.</div></div>",
+    "hasAudio": true,
+    "start": 721.84,
+    "end": 824.36
+  },
+  {
+    "id": "P17",
+    "title": "디버프 설계 시 체크사항",
+    "content": "<div class=\"slide-card\"><div class=\"card-heading\">별도 테이블로 전체 목록 관리</div><div class=\"card-desc\">모든 디버프를 테이블로 정의하고, 캐릭터에 적용 중인 디버프는 <strong>(ID + 남은 시간)</strong>리스트로 별도 관리한다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">테이블 필수 항목</div><div class=\"card-desc\">: 고유 ID, 종류, 수, 기본 지속 시간, 해제 조건, 중복 처리 규칙, Max Stack 주요 디버프 유형:</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Stun</div><div class=\"card-desc\">: 이동/공격/스킬 불가</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Blind</div><div class=\"card-desc\">: 원거리 명중률 0 또는 대폭 감소</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Silence</div><div class=\"card-desc\">: 스킬 불가. 기본 공격 허용</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Sleep</div><div class=\"card-desc\">: 모든 행동 불가. 피격 시 즉시 해제</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Slow</div><div class=\"card-desc\">: 이동속도 % 감소. 중첩 여부 별도 정의</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Curse</div><div class=\"card-desc\">: 능력치 감소. 지속 시간 동안 유지</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Knockback</div><div class=\"card-desc\">: 강제 이동. 지속 시간 없이 즉시 처리</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">중복 적용 처리 및 횟수 제한</div><div class=\"card-desc\">디버프별로 중복 교정용 방식을 명확히 정의한다. 시간 갱신(Refresh): 남은 시간 초기화. Stun 등 강한 제어기에 적합 누적(Stack): 수치 또는 시간 합산. Max Stack 상한 필수.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">Ex)</div><div class=\"card-desc\">Slow -20% x 2 = -40% 무시(Ignore): 중복 차단. Sleep 등 피격 해제형에 적합 Max Stack 미설정 시 리스트가 무한 증가해 성능 문제가 생길 수 있다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">지속 시간 및 해제 조건</div><div class=\"card-desc\">지속 시간은 스킬 테이블에서 관리한다. 같은 Stun도 스킬마다 시간이 다를 수 있기 때문이다.</div></div>\n<div class=\"slide-card\"><div class=\"card-heading\">해제 조건 유형:</div><div class=\"card-desc\">시간 경과, 피격, 해제 마법/아이템, 특정 행동, 사망 시 초기화. 복수 조건인 경우 OR(하나만) vs AND(모두 만족) 처리 방식도 함께 정의해야 한다.</div></div>",
+    "hasAudio": true,
+    "start": 824.36,
+    "end": 881.04
+  }
+];
+const TRANSCRIPT = [{"start": 0.0, "end": 3.7600000000000002, "text": "어두운 방 안에서 모니터 불빛만 켜져 있고"}, {"start": 3.7600000000000002, "end": 6.5200000000000005, "text": "그 화면 속 거대한 드래곤을 향해"}, {"start": 6.5200000000000005, "end": 10.8, "text": "청취자님이 키보디 버튼 하나를 가볍게 누른다고 상상해 보세요"}, {"start": 10.8, "end": 14.32, "text": "화려한 빛무리가 번쩍이면서 불덩이가 날아가고"}, {"start": 14.32, "end": 16.28, "text": "드래곤이 굉음을 내며 쓰러집니다"}, {"start": 16.28, "end": 20.12, "text": "네, 게이머라면 누구나 짜릿함을 느끼는 그 순간이죠"}, {"start": 20.12, "end": 21.0, "text": "맞아요"}, {"start": 21.0, "end": 22.400000000000002, "text": "근데 청취자님"}, {"start": 22.400000000000002, "end": 25.96, "text": "이 단순하고 통쾌한 손가락 움직임 뒤에"}, {"start": 25.96, "end": 30.68, "text": "도대체 얼마나 약간 끔찍할 정도로 정교한 수학이랑"}, {"start": 30.68, "end": 33.32, "text": "논리의 톱니바퀴가 맞물려 돌아가고 있는지"}, {"start": 33.32, "end": 35.08, "text": "상상해 보신 적 있나요?"}, {"start": 35.08, "end": 38.8, "text": "오늘 이 심층 탐구 여정에 오신 여러분 진심으로 환영합니다"}, {"start": 38.8, "end": 40.44, "text": "반갑습니다"}, {"start": 40.44, "end": 42.24, "text": "오늘 우리가 파헤쳐볼 자료는"}, {"start": 42.24, "end": 45.84, "text": "게임 기획을 처음 배우는 학생을 위한 강의 자료잖아요"}, {"start": 45.84, "end": 50.72, "text": "1페이지부터 17페이지까지 모든 개념을 샅샅이 살펴볼 텐데"}, {"start": 50.72, "end": 54.6, "text": "사실 이게 단순한 게임 개발 지침서가 아니더라고요"}, {"start": 54.64, "end": 55.56, "text": "그러니까요"}, {"start": 55.56, "end": 57.480000000000004, "text": "저도 쭉 읽어보면서"}, {"start": 57.480000000000004, "end": 59.84, "text": "와 이건 진짜 기획자들이"}, {"start": 59.84, "end": 63.84, "text": "어떻게 신의 입장에서 복잡한 세계의 규칙을 창조하고"}, {"start": 63.84, "end": 66.2, "text": "질서를 유지하는지 보여주는"}, {"start": 66.2, "end": 68.56, "text": "거의 마스터 클래스급 설계도면이다"}, {"start": 68.56, "end": 69.76, "text": "이런 생각이 들었어요"}, {"start": 69.76, "end": 71.04, "text": "맞습니다"}, {"start": 71.04, "end": 73.36, "text": "평범한 게이머의 시선에서 벗어나서"}, {"start": 73.36, "end": 76.56, "text": "보이지 않는 질서를 부여하는 설계자의 시선으로"}, {"start": 76.56, "end": 78.28, "text": "세상을 바라보는 시간이죠"}, {"start": 78.28, "end": 80.64, "text": "네, 그래서 오늘의 미션은"}, {"start": 80.64, "end": 84.32, "text": "이 강의 자료의 첫 페이지부터 마지막 17페이지까지"}, {"start": 84.32, "end": 88.55999999999999, "text": "단 하나의 개념도 빠짐없이 완벽하게 해체하고 소화하는 겁니다"}, {"start": 88.55999999999999, "end": 90.91999999999999, "text": "자 그럼 1페이지의 가장 기본 단위"}, {"start": 90.91999999999999, "end": 92.32, "text": "바로 스킬에서 출발해 볼까요?"}, {"start": 92.32, "end": 93.52, "text": "좋습니다"}, {"start": 93.52, "end": 95.03999999999999, "text": "보통 스킬이라고 하면"}, {"start": 95.03999999999999, "end": 97.75999999999999, "text": "그냥 적을 때리거나 마법을 쓰는"}, {"start": 97.75999999999999, "end": 100.56, "text": "단순한 기능 정도로 생각하시기 쉬운데요"}, {"start": 100.56, "end": 103.63999999999999, "text": "이 자료에서는 스킬을 전투의 리듬이자"}, {"start": 103.63999999999999, "end": 106.6, "text": "플레이어가 게임 세계에 자신의 의지를 표현하는"}, {"start": 106.6, "end": 109.35999999999999, "text": "개입 언어라고 명확히 정의하고 있습니다"}, {"start": 109.35999999999999, "end": 112.91999999999999, "text": "아, 그 언어라는 비유가 진짜 확 와닿았어요"}, {"start": 112.92, "end": 114.32000000000001, "text": "우리가 외국어 배울 때"}, {"start": 114.32000000000001, "end": 116.04, "text": "억양이나 제스처가 합쳐져야"}, {"start": 116.04, "end": 118.6, "text": "의미가 제대로 전달되는 것처럼 말이죠"}, {"start": 118.6, "end": 122.84, "text": "2페이지를 보면 스킬도 4가지 핵심 요소로 구성되어 있잖아요"}, {"start": 122.84, "end": 124.36, "text": "정확합니다"}, {"start": 124.36, "end": 127.12, "text": "우리가 대화할 때 텍스트만 전달하는 게 아니듯이"}, {"start": 127.12, "end": 128.84, "text": "스킬도 마찬가지예요"}, {"start": 128.84, "end": 130.28, "text": "먼저 캐릭터와 한몸이 되도록"}, {"start": 130.28, "end": 132.8, "text": "몰입감을 주는 애니메이션이 있고요"}, {"start": 132.8, "end": 135.72, "text": "스킬의 성격과 타격 강도를 시각적으로 보여주는"}, {"start": 135.72, "end": 137.64, "text": "비주얼 이펙트가 필수적입니다"}, {"start": 137.64, "end": 142.08, "text": "네, 거기다가 타격감을 완성하는 사운드가 있죠"}, {"start": 142.08, "end": 144.84, "text": "진짜 컴퓨터 소리 아예 끄고 게임을 해보면"}, {"start": 144.84, "end": 147.24, "text": "아무리 화면에서 화려한 이펙트가 터져도"}, {"start": 147.24, "end": 149.16000000000003, "text": "타격감이 확 죽어버리거든요"}, {"start": 149.16000000000003, "end": 151.84, "text": "억양 빠진 외국어처럼 완전 밋밋해져요"}, {"start": 151.84, "end": 153.24, "text": "그렇죠"}, {"start": 153.24, "end": 157.36, "text": "그런데 방금 말씀하신 애니메이션, 이펙트, 사운드는"}, {"start": 157.36, "end": 160.20000000000002, "text": "겉으로 드러나는 포장지에 불과합니다"}, {"start": 160.20000000000002, "end": 162.36, "text": "3페이지로 넘어가면 기획자에게"}, {"start": 162.36, "end": 165.4, "text": "가장 치명적으로 중요한 네 번째 요소"}, {"start": 165.4, "end": 168.60000000000002, "text": "바로 눈에 보이지 않는 뼈대인 데이터가 등장하죠"}, {"start": 169.51999999999998, "end": 173.0, "text": "데미지 수치나 사거리, 쿨타임 같은 것들 말씀하시는 거죠?"}, {"start": 173.0, "end": 174.32, "text": "네, 맞아요"}, {"start": 174.32, "end": 177.72, "text": "이 데이터와 발동 방식에 따라서 스킬엔 크게"}, {"start": 177.72, "end": 180.07999999999998, "text": "액티브와 패시브로 나뉩니다"}, {"start": 180.07999999999998, "end": 182.68, "text": "플레이어가 원할 때 통제하는 게 액티브"}, {"start": 182.68, "end": 186.48, "text": "조건이 맞으면 알아서 발동하는 게 패시브 스킬이죠"}, {"start": 186.48, "end": 188.68, "text": "이런 설계가 결국 게임의 재미와"}, {"start": 188.68, "end": 191.48, "text": "캐릭터의 정체성을 완전히 결정 짓게 됩니다"}, {"start": 191.48, "end": 194.28, "text": "그 언어라는 비율을 계속 가져가 보면"}, {"start": 194.28, "end": 197.84, "text": "4페이지에서는 그 언어가 어떤 형태로 발음 되고"}, {"start": 197.88, "end": 201.88, "text": "누구를 향해 날아가는지, 타겟팅과 형태를 다루더라고요"}, {"start": 201.88, "end": 205.96, "text": "참고로 오늘 자료는 요리나 채집 같은 생산 스킬은 빼고"}, {"start": 205.96, "end": 208.16, "text": "철저히 전투 스킬에만 집중하고 있습니다"}, {"start": 208.16, "end": 212.56, "text": "네, 전투 상황에서 발동 타입은 정말 중요합니다"}, {"start": 212.56, "end": 215.6, "text": "버튼 누르자 먼저 즉시 나가는 인스턴트가 있고"}, {"start": 215.6, "end": 219.04, "text": "에너지를 모아야 위력이 커지는 차징 방식이 있죠"}, {"start": 219.04, "end": 221.92000000000002, "text": "그리고 게이지가 차오르게 기다리는 캐스팅"}, {"start": 221.92000000000002, "end": 224.08, "text": "누르는 내내 나가는 채널링도 있고요"}, {"start": 224.08, "end": 227.12, "text": "전 여기서 진짜 흥미로웠던 게 있어요"}, {"start": 227.12, "end": 230.72, "text": "캐스팅이나 채널링이 단순히 게임 템포를 느리게 하려고"}, {"start": 230.72, "end": 232.8, "text": "시간 끄는 게 아니라는 거잖아요"}, {"start": 232.8, "end": 234.72, "text": "그럼 어떤 의미로 다가오셨나요?"}, {"start": 234.72, "end": 239.28, "text": "마법사가 거대한 메테오를 소환하려고 주문을 외우는 3초 동안"}, {"start": 239.28, "end": 242.04, "text": "적의 공격에 완전 무방비로 노출되잖아요"}, {"start": 242.04, "end": 247.04000000000002, "text": "그러니까 엄청난 파괴력을 원하면 너의 취약점이라는 리스크를 감수해라"}, {"start": 247.04000000000002, "end": 249.68, "text": "이런 하이리스크 하이리턴 철학이 담겨 있는 거죠"}, {"start": 249.68, "end": 251.68, "text": "완벽한 통찰입니다"}, {"start": 251.68, "end": 254.28, "text": "타겟팅 방식도 비슷한 맥락이에요"}, {"start": 254.28, "end": 257.8, "text": "백발 백중 명중하는 안정적인 타겟팅이 있는 반면"}, {"start": 257.8, "end": 262.24, "text": "빗나갈 위험이 있지만 회피 변수를 만드는 논 타겟팅이 있죠"}, {"start": 262.24, "end": 266.2, "text": "그리고 광역기, 보통 AOE, AOE라고 부르는 스킬들은"}, {"start": 266.2, "end": 268.52, "text": "한 번에 여러 명을 쓸어 버릴 수 있지만"}, {"start": 268.52, "end": 273.44, "text": "상황에 따라 아군한테도 피해를 줄 수 있다는 치명적인 딜레마를 안겨주기도 하잖아요"}, {"start": 273.44, "end": 275.76, "text": "스킬 역할도 단순히 공격 뿐만 아니라"}, {"start": 275.76, "end": 279.4, "text": "버프, 디버프, 회복도 도트 힐로나뉘고요"}, {"start": 279.4, "end": 280.56, "text": "맞습니다"}, {"start": 280.56, "end": 284.96, "text": "소환까지 포함하면 스킬의 형태는 그야말로 무궁무진하죠"}, {"start": 284.96, "end": 287.24, "text": "자, 언어의 형태를 알았으니"}, {"start": 287.24, "end": 291.72, "text": "5페이지부터는 이게 복잡하게 얽히는 멀티플레이어 환경을 봅니다"}, {"start": 291.72, "end": 295.92, "text": "여기서 밸런스 붕괴를 막기 위해 기획자가 반드시 지켜야 할 철학이"}, {"start": 295.92, "end": 297.6, "text": "바로 분리설계입니다"}, {"start": 297.6, "end": 300.36, "text": "아, 싱글플레이어면 상관없는데"}, {"start": 300.36, "end": 304.6, "text": "수십 명이 동시에 싸우는 상황이면 얘기가 완전히 달라지니까요"}, {"start": 304.6, "end": 306.4, "text": "그 5페이지 예시 보니까"}, {"start": 306.4, "end": 310.0, "text": "데미지 주면서 스턴 걸고 독까지 거는 복합 스킬은"}, {"start": 310.0, "end": 312.15999999999997, "text": "하나의 코드로 짜면 절대 안 된다고 하더라고요"}, {"start": 312.15999999999997, "end": 315.08, "text": "네, 초보 기획자들의 흔한 실수죠"}, {"start": 315.08, "end": 319.79999999999995, "text": "각 효과는 반드시 독립된 클래스로 분리해야 나중에 꼬이지 않습니다"}, {"start": 319.79999999999995, "end": 321.15999999999997, "text": "더 극단적인 예로"}, {"start": 321.15999999999997, "end": 324.56, "text": "적 체력을 5% 무조건 깎는 스킬이 있다고 쳐볼까요?"}, {"start": 324.56, "end": 327.15999999999997, "text": "그니까요 그 예시 진짜 웃겼어요"}, {"start": 327.15999999999997, "end": 331.64, "text": "만약 20명의 레이드 파티원이 0.1초만에 동시에 그 스킬을 써버리면"}, {"start": 331.64, "end": 335.15999999999997, "text": "보스가 등장하자마자 1초만에 피가 0이 돼서 사르르 녹아버리잖아요"}, {"start": 335.15999999999997, "end": 336.12, "text": "대참사죠 완전"}, {"start": 336.12, "end": 340.8, "text": "동시에 행동할 때 시스템이 버틸 수 있는가를 의심해야 합니다"}, {"start": 340.8, "end": 346.16, "text": "6페이지에 나오는 투사체 설계 원칙이 바로 이 시스템 아키텍처의 정수를 보여주죠"}, {"start": 346.16, "end": 350.64, "text": "아, 그 유지 보수를 위한 기가 막힌 분업 말씀하시는 거군요"}, {"start": 350.64, "end": 354.28000000000003, "text": "스킬이랑 투사체 클래스가 완벽하게 남남이어야 한다는 거"}, {"start": 354.28000000000003, "end": 355.4, "text": "맞습니다"}, {"start": 355.4, "end": 360.6, "text": "스킬 시스템은 오직 어떤 투사체를 몇 개, 어느 타이밍에 생성할 것인가"}, {"start": 360.6, "end": 362.44, "text": "이 지시만 내리면 끝입니다"}, {"start": 362.44, "end": 365.64, "text": "잠깐만요 그러니까 제가 불화살 스킬을 쏴도"}, {"start": 365.64, "end": 368.96, "text": "스킬 시스템이 끝까지 적을 쫓아가서 때리는 게 아니라"}, {"start": 368.96, "end": 371.44, "text": "그냥 야, 불화살 3번 아이디 생성해라"}, {"start": 371.44, "end": 373.47999999999996, "text": "이러고 곧바로 퇴근해 버린다는 거잖아요"}, {"start": 373.47999999999996, "end": 376.12, "text": "하하 완벽한 비유입니다"}, {"start": 376.12, "end": 378.76, "text": "스킬은 쿨하게 생성만 하고 퇴근하죠"}, {"start": 378.76, "end": 382.59999999999997, "text": "그럼 생성된 투사체 혼자서 물리 엔진의 지배를 받으며 날아가고"}, {"start": 382.59999999999997, "end": 384.76, "text": "부딪혀서 폭발하는 겁니다"}, {"start": 384.76, "end": 387.15999999999997, "text": "만약 스킬이 이걸 다 책임졌다면"}, {"start": 387.15999999999997, "end": 390.24, "text": "에러 났을 때 원인 찾기가 지옥이었을 겁니다"}, {"start": 390.24, "end": 392.28, "text": "와 진짜 똑똑하네요"}, {"start": 392.32, "end": 397.88, "text": "7페이지 보니까 이 퇴근과 분업 철학이 소화물 설계에도 똑같이 적용되던데요"}, {"start": 397.88, "end": 402.28, "text": "소환수 불러놓고 스킬은 또 퇴근하고 남겨진 소환수는 알아서 싸우고요"}, {"start": 402.28, "end": 406.59999999999997, "text": "네 이때 어그로 규칙 3가지 중 하나를 정해야 합니다"}, {"start": 406.59999999999997, "end": 410.84, "text": "소환물 독립적으로 어그로를 받을지 주인 수치에 합산시킬지"}, {"start": 410.84, "end": 413.47999999999996, "text": "아예 무관한 투명 존재로 만들지요"}, {"start": 413.47999999999996, "end": 417.4, "text": "그리고 AI 구조에서도 고도의 효율화 꼼수가 등장하죠"}, {"start": 417.4, "end": 421.03999999999996, "text": "오 몬스터들 AI를 소환물이랑 공유하는 거요?"}, {"start": 421.04, "end": 425.6, "text": "걷고 뛰고 때리는 로직을 새로 다 짜면 돈이랑 시간이 엄청 깨지니까"}, {"start": 425.6, "end": 429.8, "text": "이미 게임에 널려있는 적 몬스터 인공지능을 그대로 재활용하는 거잖아요"}, {"start": 429.8, "end": 431.32, "text": "완전 가성비 최고네요"}, {"start": 431.32, "end": 436.04, "text": "그렇죠 자 투사체나 소환물이 성공적으로 적에게 닿았습니다"}, {"start": 436.04, "end": 438.96000000000004, "text": "닿아서 체력만 깎으면 계산이 편할 텐데"}, {"start": 438.96000000000004, "end": 442.64000000000004, "text": "8페이지로 넘어가서 적의 행동을 제어하는 상태 이상"}, {"start": 442.64000000000004, "end": 447.44, "text": "즉 cc기가 걸리기 시작하면 기획자의 진짜 악몽이 시작됩니다"}, {"start": 447.44, "end": 450.24, "text": "아 그 행동 제어 시나리오요"}, {"start": 450.24, "end": 453.48, "text": "8페이지랑 9페이지 예시보니까 머리 아프더라구요"}, {"start": 453.48, "end": 455.8, "text": "보스랑 싸우다 2초 실명 걸렸는데"}, {"start": 455.8, "end": 461.6, "text": "0.5초 뒤에 1초 스턴 또 0.5초 뒤에 1.5초 침묵 맞으면"}, {"start": 461.6, "end": 464.48, "text": "도대체 이 캐릭터는 지금 무슨 상태여야 하는 건가요?"}, {"start": 464.48, "end": 466.8, "text": "아주 좋은 질문입니다"}, {"start": 466.8, "end": 471.04, "text": "게다가 캐릭터가 10초짜리 수면마법에 걸려서 자고 있는데"}, {"start": 471.04, "end": 475.04, "text": "몬스터한테 맞아서 1초 기절에 걸렸다고 가정해보죠"}, {"start": 475.04, "end": 479.44, "text": "유저들은 자다가 맞았으니까 깨겠지라고 단순하게 생각합니다"}, {"start": 479.44, "end": 484.48, "text": "아니면 기절이 더 센 거니까 자면서 기절했겠지 이렇게 짐작할 수도 있고요"}, {"start": 484.48, "end": 487.48, "text": "이거 진짜 개발자들끼리 멱살 잡고 싸울 상황 아닌가요?"}, {"start": 487.48, "end": 489.56, "text": "바로 그 지점이죠"}, {"start": 489.56, "end": 493.36, "text": "뒷단에 있는 서버는 그런 인간적인 직관이 없습니다"}, {"start": 493.36, "end": 498.0, "text": "그래서 기획자는 이 엉켜있는 무질서에 질서를 부여하려고"}, {"start": 498.0, "end": 501.36, "text": "냉혹한 엑셀표 같은 리스트 구조를 씁니다"}, {"start": 501.36, "end": 506.84, "text": "상태 이상 id와 남은 시간을 매 틱 단위로 철저하게 깎아내리는 거죠"}, {"start": 506.84, "end": 510.88, "text": "아하 그래서 중복 처리 규칙 3가지가 나온 거군요"}, {"start": 510.88, "end": 516.16, "text": "새로운 거 맞을 때마다 지속 시간이 초기화되는 시간 갱신, Refresh 방식이 있고요"}, {"start": 516.16, "end": 519.6, "text": "그리고 시간이 더해지는 누적, Stack이 있죠"}, {"start": 519.6, "end": 523.28, "text": "마지막으로 아예 안 받는 무시, Ignore가 있고요"}, {"start": 523.28, "end": 526.4, "text": "수면은 맞으면 깨야 하니까 Ignore에 딱 어울리네요"}, {"start": 526.4, "end": 531.4399999999999, "text": "네 그리고 10페이지를 보면 해제 조건 로직도 명확해야 합니다"}, {"start": 531.4399999999999, "end": 534.72, "text": "조건들을 전부 만족해야 풀리는 And 조건인지"}, {"start": 534.72, "end": 537.6, "text": "하나만 충족해도 풀리는 Or 조건인지"}, {"start": 537.6, "end": 540.72, "text": "논리 연산을 제대로 정의해둬야 에러가 안 납니다"}, {"start": 540.72, "end": 543.6, "text": "행동 제어하는 상태 이상도 이렇게 복잡한데"}, {"start": 543.6, "end": 547.1600000000001, "text": "11페이지부터 나오는 버프랑 디버프의 수학적 충돌을 보니까"}, {"start": 547.1600000000001, "end": 548.84, "text": "이건 거의 논문 수준이던데요?"}, {"start": 548.84, "end": 554.6, "text": "맞습니다 캐릭터 능력치가 변동할 때는 아주 치밀한 연산이 필요하죠"}, {"start": 554.6, "end": 560.08, "text": "내 캐릭터가 공속 10% 물약 먹고 파티원한테 20% 스킬버프 받고"}, {"start": 560.08, "end": 563.52, "text": "옆에 성기사 오라로 5% 또 받으면 어떻게 될까요?"}, {"start": 563.52, "end": 567.3199999999999, "text": "기획자는 이걸 다 합쳐서 35%로 퉁칠지"}, {"start": 567.3199999999999, "end": 571.96, "text": "아니면 제일 높은 20% 하나만 덮어 씌울지 정해야 하잖아요"}, {"start": 571.96, "end": 574.1999999999999, "text": "게다가 12페이지 보니까"}, {"start": 574.1999999999999, "end": 578.1999999999999, "text": "퍼센트 계산의 기준값을 뭘로 잡을지도 엄청난 문제더라고요"}, {"start": 578.1999999999999, "end": 584.64, "text": "네 벌거벗은 맨몸 기준인지 강력한 무기를 낀 상태 기준인지 정해야 하죠"}, {"start": 584.64, "end": 588.6, "text": "덧셈을 먼저 할지 곱셈을 먼저 할지 룰을 안정해두면"}, {"start": 588.6, "end": 592.96, "text": "프로그래머마다 결과값이 완전히 다르게 나오는 대참사가 터집니다"}, {"start": 593.0, "end": 595.6800000000001, "text": "여기서 진짜 지옥의 시나리오가 등장합니다"}, {"start": 595.6800000000001, "end": 598.4000000000001, "text": "청취자님 13페이지에 나오는 건데"}, {"start": 598.4000000000001, "end": 603.6800000000001, "text": "리그오브레전드에서 얄미운 티모의 독버섯 3개를 연달아 밟아 본 적 있으신가요?"}, {"start": 603.6800000000001, "end": 606.24, "text": "으아 아주 끔찍한 기억이죠"}, {"start": 606.24, "end": 609.84, "text": "마법 저항력 0에 체력 딱 1000인 캐릭터가"}, {"start": 609.84, "end": 613.52, "text": "0.5초 간격으로 버섯을 밟는다고 쳐보죠"}, {"start": 613.52, "end": 618.0400000000001, "text": "게다가 상대가 대상의 현재 체력 비례로 데미지를 주고"}, {"start": 618.0400000000001, "end": 622.4000000000001, "text": "이속 느려지면 2배 보너스 주는 악랄한 아이템을 낀 상황입니다"}, {"start": 622.4, "end": 625.1999999999999, "text": "첫번째 버섯 밟았을 때는 체력이 1000이니까"}, {"start": 625.1999999999999, "end": 629.04, "text": "아이템 추가 피해가 계산되고 이속 느리니까 2배 들어가고"}, {"start": 629.04, "end": 631.04, "text": "뭐 여기까지는 저도 암산이 되거든요"}, {"start": 631.04, "end": 633.12, "text": "체력이 비명 지르며 깎이겠죠"}, {"start": 633.12, "end": 637.64, "text": "근데 문제는 정확히 0.5초 뒤에 두번째 버섯 밟았을 때잖아요?"}, {"start": 637.64, "end": 640.64, "text": "여기서 서버 프로그래머 머리가 터집니다"}, {"start": 640.64, "end": 644.04, "text": "버섯 지속시간이 독립적으로 돌아가는 상황에서"}, {"start": 644.04, "end": 646.84, "text": "아이템 효과 기준이 최대 체력이 아니라"}, {"start": 646.84, "end": 649.16, "text": "현재 체력이라는게 핵심이에요"}, {"start": 649.16, "end": 651.3199999999999, "text": "최초의 1000을 기준으로 할 건지"}, {"start": 651.3199999999999, "end": 654.1999999999999, "text": "실시간으로 깎인 체력을 기준으로 할 건지"}, {"start": 654.1999999999999, "end": 656.36, "text": "매 틱마다 연산해야 하니까요"}, {"start": 656.36, "end": 659.1999999999999, "text": "와 게다가 이속 감소 2배 보너스 판정도"}, {"start": 659.1999999999999, "end": 661.4399999999999, "text": "0.5초마다 데미지 들어갈 때 이 캐릭터가"}, {"start": 661.4399999999999, "end": 664.64, "text": "여전히 느려져 있는지 계속 체크해야 한다는 거잖아요?"}, {"start": 664.64, "end": 666.8, "text": "플레이어는 으악하면서 죽어가지만"}, {"start": 666.8, "end": 670.04, "text": "서버는 그 찰나에 조건부 확률을 미친 듯이 계산하고 있는 거네요"}, {"start": 670.04, "end": 671.92, "text": "정말 경이로운 세계죠"}, {"start": 671.92, "end": 677.12, "text": "14페이지에서는 버프와 디버프가 정면 충돌하는 상황도 다룹니다"}, {"start": 677.16, "end": 679.92, "text": "적이 이속 깎는 슬로우를 걸었는데"}, {"start": 679.92, "end": 683.84, "text": "아군이 이속 올리는 헤이스트 버프를 주면 어떡할까요?"}, {"start": 683.84, "end": 686.6, "text": "기획 철학이 세 갈래로 나뉘던데"}, {"start": 686.6, "end": 690.32, "text": "두 효과를 다 살려두고 합산하는 케이스 A가 있고요"}, {"start": 690.32, "end": 694.4, "text": "계산 피하려고 절대값 큰 거 하나만 덮어 씌우는 케이스 B"}, {"start": 694.4, "end": 698.0, "text": "그리고 아예 그룹 나눠서 곱해버리는 케이스 C가 있죠"}, {"start": 698.0, "end": 701.32, "text": "보통은 직관적인 케이스 A를 많이 쓴다고 하더라고요"}, {"start": 701.32, "end": 702.64, "text": "맞습니다"}, {"start": 702.64, "end": 706.24, "text": "자 이제 대망의 마지막 파트 15페이지입니다"}, {"start": 706.24, "end": 709.36, "text": "이 복잡한 연산을 렉 없이 처리하기 위해"}, {"start": 709.36, "end": 713.52, "text": "기획자가 반드시 지켜야 하는 궁극의 체크리스트죠"}, {"start": 713.52, "end": 715.6800000000001, "text": "일단 무조건 버프와 디버프는"}, {"start": 715.6800000000001, "end": 719.04, "text": "별도의 엑셀 시트 같은 테이블로 관리해야 합니다"}, {"start": 719.04, "end": 721.84, "text": "네 그 중에서도 버프가 어디서 왔는지"}, {"start": 721.84, "end": 725.2, "text": "출처 그룹을 명시하는 게 진짜 중요하더라고요"}, {"start": 725.2, "end": 727.92, "text": "캐릭터 스킬인지 PC방 혜택인지"}, {"start": 727.92, "end": 731.88, "text": "출처에 따라 덮어쓸지 말지 우선순위가 정해지니까요"}, {"start": 731.88, "end": 734.12, "text": "레벨 3짜리 좋은 버프 켰는데"}, {"start": 734.16, "end": 737.32, "text": "레벨 1짜리가 지워버리면 유저 폭동 나죠"}, {"start": 737.32, "end": 739.52, "text": "절대 일어나선 안 될 일이죠"}, {"start": 739.52, "end": 743.28, "text": "그리고 16페이지에서 가장 철학적인 딜레마가 나옵니다"}, {"start": 743.28, "end": 746.6, "text": "최대 체력, 버프, 해제 딜레마인데요"}, {"start": 746.6, "end": 750.96, "text": "제 원래 피가 200인데 힐러 버프로 300이 됐습니다"}, {"start": 750.96, "end": 753.24, "text": "보스한테 맞아서 99 남았는데"}, {"start": 753.24, "end": 755.2, "text": "버프 시간이 딱 끝났어요"}, {"start": 755.2, "end": 758.0, "text": "이 남은 99는 어떻게 되어야 할까요?"}, {"start": 758.0, "end": 761.28, "text": "첫 번째는 33% 비율 맞춰서"}, {"start": 761.3199999999999, "end": 765.1999999999999, "text": "원래 체력인 66으로 자연스럽게 깎아버리는 방식이었죠"}, {"start": 765.1999999999999, "end": 769.1999999999999, "text": "근데 안 맞았는데 피가 깎이면 플레이어 기분 되게 나쁠 것 같은데요"}, {"start": 769.1999999999999, "end": 772.36, "text": "두 번째 정직한 뺄셈 방식도 웃겼어요"}, {"start": 772.36, "end": 775.6, "text": "버프 받을 때 100을 얻었으니 끝날 때 100을 빼앗는 거죠"}, {"start": 775.6, "end": 780.16, "text": "아니 제 피가 99인데 거기서 100 빼면 -1이 되잖아요"}, {"start": 780.16, "end": 783.16, "text": "버프 끝났다는 이유로 심장마비로 즉사하는 건"}, {"start": 783.16, "end": 785.0, "text": "진짜 너무 끔찍하잖아요"}, {"start": 785.0, "end": 786.6, "text": "하하 맞습니다"}, {"start": 786.6, "end": 792.08, "text": "그래서 1은 무조건 남겨준다는 예외코드를 꼭 짜 넣어야 합니다"}, {"start": 792.08, "end": 796.9200000000001, "text": "가장 자비로운 세 번째 방식은 상한 선만 200으로 돌려놓고"}, {"start": 796.9200000000001, "end": 800.08, "text": "현재 남은 99는 안 건드리는 방식이고요"}, {"start": 800.08, "end": 801.84, "text": "전 무조건 세 번째요"}, {"start": 801.84, "end": 804.6800000000001, "text": "유저 감정도 안 상하고 즉사할 일도 없고요"}, {"start": 804.6800000000001, "end": 807.0, "text": "그럼 시스템적으로는 세 번째가 정답인가요?"}, {"start": 807.0, "end": 809.84, "text": "놀랍게도 절대적인 정답은 없습니다"}, {"start": 809.84, "end": 814.6, "text": "게임 장르에 따라 냉혹한 첫 번째 방식을 밀어붙이는 분도 많거든요"}, {"start": 814.6, "end": 817.32, "text": "결국 기획자가 어떤 철학을 선택하던"}, {"start": 817.32, "end": 819.84, "text": "모든 자원에 일관성 있게 적용하느냐"}, {"start": 819.84, "end": 821.24, "text": "그게 본질입니다"}, {"start": 821.24, "end": 824.36, "text": "와 모순 없는 세계 유지 멋지네요"}, {"start": 824.36, "end": 828.0, "text": "17페이지 디버프 파트도 결국 상한선 이야기잖아요"}, {"start": 828.0, "end": 832.9200000000001, "text": "디버프를 무한정 쌓이게 두면 슬로우 1000개 쌓여서 서버 뻗어버리니까"}, {"start": 832.9200000000001, "end": 836.96, "text": "반드시 맥스 스택 즉 최대 중첩 상한선을 걸어둬야 한다는 거"}, {"start": 836.96, "end": 840.5600000000001, "text": "네 거기에 해제 조건까지 명확하게 세팅해야"}, {"start": 840.56, "end": 843.52, "text": "청취자님이 가볍게 누르는 그 버튼 한 번이"}, {"start": 843.52, "end": 846.04, "text": "버그 없이 화려하게 구현되는 겁니다"}, {"start": 846.04, "end": 849.9, "text": "오늘 1페이지부터 17페이지까지 모든 개념을 다 부숴봤습니다."}, {"start": 850.36, "end": 860.32, "text": "청취자님, 아마 오늘 이후로 스킬 쓰실 때 모니터 화면 뒤로 우선순위, 판정, 중첩 연산이라는 투명한 엑셀 시트가 쫙 아른거리실 겁니다."}, {"start": 860.4, "end": 862.4, "text": "평범한 플레이어의 즐거움을 위해"}, {"start": 862.4, "end": 867.16, "text": "치밀한 수학적 고민을 감내하는 기획자의 시선을 확실히 느끼셨을 겁니다"}, {"start": 867.16, "end": 870.4, "text": "무질서한 변수의 규칙으로 질서를 세우는 것"}, {"start": 870.4, "end": 872.64, "text": "그게 시스템 설계의 진짜 매력이죠"}, {"start": 872.64, "end": 876.3199999999999, "text": "맞아요 오늘 우리는 게임 속 시스템 붕괴를 막기 위해"}, {"start": 876.3199999999999, "end": 881.04, "text": "Max Stack, 상한선과 명확한 해제 조건이 꼭 필요하다는 걸 배웠습니다"}, {"start": 881.04, "end": 882.84, "text": "근데 문득 이런 생각이 드네요"}, {"start": 882.84, "end": 884.68, "text": "우리 현실 세계는 어떨까요?"}, {"start": 884.68, "end": 888.16, "text": "정보의 홍수, SNS 알고리즘, 스트레스"}, {"start": 888.16, "end": 890.92, "text": "이런 현실의 디버프들이 지금 우리 삶에"}, {"start": 890.92, "end": 895.24, "text": "아무 상한선도 없이 1000개, 10,000개 스택으로 무한 누적되고 있진 않나요?"}, {"start": 895.24, "end": 900.0799999999999, "text": "오 현실의 디버프 스택이라 아주 깊이 있는 질문입니다"}, {"start": 900.12, "end": 905.08, "text": "게임처럼 현실의 우리에게도 삶이 버그로 멈춰버리기 전에"}, {"start": 905.08, "end": 908.12, "text": "디버프 상한 선이나 명확한 해제 조건이"}, {"start": 908.12, "end": 912.8000000000001, "text": "시스템적으로 필요하지 않을지 한번 상상해 보시기 바랍니다"}, {"start": 912.8000000000001, "end": 915.9200000000001, "text": "오늘 저희의 심층 탐구 여정은 여기까지입니다"}, {"start": 915.9200000000001, "end": 917.76, "text": "저희는 다음 이 시간에도"}, {"start": 917.76, "end": 920.96, "text": "뇌를 자극하는 흥미로운 자료와 함께 돌아오겠습니다"}];
+
+// ========== 인터랙티브 편집/메모 API 연동 ==========
+const SC_API = '';
+const SC_REPO = document.querySelector('meta[name="sc-repo"]')?.content || '';
+let _scData = { edits: {}, memos: {}, isAdmin: false };
+let _scLoaded = false;
+function _dismissLoading() {
+    var ol = document.getElementById('sc-loading-overlay');
+    if (!ol) return;
+    ol.classList.add('fade-out');
+    ol.addEventListener('transitionend', function() { ol.remove(); });
+}
+let _editMode = new URLSearchParams(location.search).has('edit');
+let _subtitleMode = new URLSearchParams(location.search).has('subtitle');
+let _mappingMode = new URLSearchParams(location.search).has('mapping');
+
+// 원본 매핑 스냅샷 (DELETE 시 복원용). SLIDES 선언 직후 단 1회 캡처.
+const _scOriginalMapping = SLIDES.map(function(s) {
+    return { start: s.start, end: s.end, hasAudio: s.hasAudio };
+});
+
+async function loadOverlayData() {
+    if (!SC_REPO) { _dismissLoading(); return; }
+    try {
+        const res = await fetch(`${SC_API}/api/data/${encodeURIComponent(SC_REPO)}`, {
+            credentials: 'include'
+        });
+        if (!res.ok) { showSlide(currentSlide); return; }
+        _scData = await res.json();
+
+        // 수정본 적용: SLIDES content + title 교체
+        for (const [pid, edit] of Object.entries(_scData.edits)) {
+            const idx = SLIDES.findIndex(s => s.id === pid);
+            if (idx !== -1) {
+                SLIDES[idx]._originalContent = SLIDES[idx]._originalContent || SLIDES[idx].content;
+                SLIDES[idx].content = edit.content;
+                if (edit.title) {
+                    SLIDES[idx]._originalTitle = SLIDES[idx]._originalTitle || SLIDES[idx].title;
+                    SLIDES[idx].title = edit.title;
+                }
+            }
+        }
+
+        // 자막 수정본 적용
+        if (_scData.transcriptEdits) {
+            for (var segId in _scData.transcriptEdits) {
+                var idx = parseInt(segId);
+                if (idx < TRANSCRIPT.length) {
+                    TRANSCRIPT[idx].text = _scData.transcriptEdits[segId];
+                }
+            }
+            // IIFE 내부 콜백을 통해 자막 편집 상태 갱신
+            if (_subtitleMode && typeof _steApplyOverlay === 'function') {
+                _steApplyOverlay(_scData.transcriptEdits);
+            }
+            // 자막 캐시 리셋 — TRANSCRIPT 교체 후 현재 표시 중인 자막 강제 갱신
+            lastSubIdx = -1;
+        }
+
+        // 매핑 수정본 적용
+        if (_scData.mappingEdits) {
+            for (var mid in _scData.mappingEdits) {
+                var mIdx = SLIDES.findIndex(function(s) { return s.id === mid; });
+                if (mIdx !== -1) {
+                    var m = _scData.mappingEdits[mid];
+                    if (m.hasAudio === false) {
+                        // 교안 전용 강등 오버레이
+                        SLIDES[mIdx].start = null;
+                        SLIDES[mIdx].end = null;
+                        SLIDES[mIdx].hasAudio = false;
+                    } else if (typeof m.start === 'number' && typeof m.end === 'number') {
+                        SLIDES[mIdx].start = m.start;
+                        SLIDES[mIdx].end = m.end;
+                        SLIDES[mIdx].hasAudio = true;
+                    }
+                }
+            }
+            // IIFE 내부 오디오 구조 재빌드 (브릿지 경유)
+            if (typeof window._scRebuildAudioStructures === 'function') {
+                window._scRebuildAudioStructures();
+            }
+        }
+
+        _scLoaded = true;
+
+        // 관리자가 아니면 편집 모드 비활성화
+        if (!_scData.isAdmin) {
+            _editMode = false;
+            _mappingMode = false;
+            var bar = document.querySelector('.edit-bar');
+            if (bar) bar.remove();
+            document.body.style.paddingTop = '';
+            var ce = document.getElementById('slide-content');
+            if (ce) ce.contentEditable = 'false';
+            var te = document.getElementById('slide-title');
+            if (te) te.contentEditable = 'false';
+            // 자막 편집 모드도 비활성화
+            _subtitleMode = false;
+            var steArea = document.getElementById('subtitle-edit-area');
+            if (steArea) steArea.style.display = 'none';
+            var slideArea = document.getElementById('slide-area');
+            if (slideArea) slideArea.style.display = '';
+            // 매핑 바 제거
+            var mbBar = document.getElementById('mapping-bar');
+            if (mbBar) mbBar.remove();
+        }
+
+        // 목차 제목 갱신 (IIFE 브릿지)
+        if (typeof _refreshTocTitles === 'function') _refreshTocTitles();
+        // 키워드 검색 하이라이트 재계산 (편집본 텍스트까지 매칭되도록)
+        if (typeof _rehighlightKeywordMatches === 'function') _rehighlightKeywordMatches();
+
+        // 현재 슬라이드 새로고침 (메모 패널 포함)
+        showSlide(currentSlide);
+        _dismissLoading();
+    } catch (e) {
+        console.warn('SC API 연결 실패:', e);
+        showSlide(currentSlide);
+        _dismissLoading();
+    }
+}
+
+// ========== 편집 모드 UI ==========
+function initEditMode() {
+    if (!_editMode) return;
+
+    // 편집 바 삽입 (?edit=1이면 무조건 표시)
+    const bar = document.createElement('div');
+    bar.className = 'edit-bar visible';
+    bar.innerHTML = '<span class="edit-bar-label">편집 모드</span>' +
+        '<div class="edit-bar-actions">' +
+        '<span class="edit-save-status" id="edit-save-status">저장됨</span>' +
+        '<span class="edit-save-error" id="edit-save-error">저장 실패</span>' +
+        '<button class="btn-cancel">취소</button>' +
+        '<button class="btn-save">저장</button>' +
+        '</div>';
+    bar.querySelector('.btn-cancel').addEventListener('click', cancelEdit);
+    bar.querySelector('.btn-save').addEventListener('click', saveEdit);
+    document.body.prepend(bar);
+
+    // content + title 편집 가능하게
+    document.getElementById('slide-content').contentEditable = 'true';
+    document.getElementById('slide-title').contentEditable = 'true';
+
+    // body에 패딩 추가 (편집 바 높이만큼)
+    document.body.style.paddingTop = '48px';
+}
+
+// ========== 매핑 편집 모드 UI ==========
+function initMappingMode() {
+    if (!_mappingMode) return;
+    if (_editMode) return;   // 교안 편집 모드가 활성이면 매핑 편집 바 생성 스킵 (DOM id 충돌 방지)
+
+    // 매핑 편집 바 삽입 (?mapping=1이면 무조건 표시)
+    const bar = document.createElement('div');
+    bar.className = 'edit-bar visible';
+    bar.innerHTML = '<span class="edit-bar-label">매핑 편집 모드</span>' +
+        '<div class="edit-bar-actions">' +
+        '<span class="edit-save-status" id="edit-save-status">저장됨</span>' +
+        '<span class="edit-save-error" id="edit-save-error">저장 실패</span>' +
+        '<button class="btn-cancel">취소</button>' +
+        '<button class="btn-save">저장</button>' +
+        '</div>';
+    bar.querySelector('.btn-cancel').addEventListener('click', cancelEdit);
+    bar.querySelector('.btn-save').addEventListener('click', saveEdit);
+    document.body.prepend(bar);
+
+    // 매핑 편집 버튼 핸들러 바인딩
+    var mbStart = document.getElementById('mb-set-start');
+    var mbEnd = document.getElementById('mb-set-end');
+    if (mbStart) mbStart.addEventListener('click', function() {
+        window._scApplyMappingEdit(window._scCurrentSlideIdx(), 'start');
+    });
+    if (mbEnd) mbEnd.addEventListener('click', function() {
+        window._scApplyMappingEdit(window._scCurrentSlideIdx(), 'end');
+    });
+
+    // 매핑 바 즉시 표시
+    if (typeof window._scRenderMappingBar === 'function') window._scRenderMappingBar();
+
+    // body에 패딩 추가 (편집 바 높이만큼)
+    document.body.style.paddingTop = '48px';
+}
+
+let _editDirty = false;
+let _editDirtySlides = {}; // slide.id -> true (미저장 상태 추적)
+let _editBaselines = {}; // slide.id -> {content, title} (취소 시 복원 기준)
+// 매핑 편집 상태 (교안 편집과 병렬 관리)
+let _scDirtyMappings = {};      // slide.id -> true (미저장 매핑 수정)
+let _scMappingBaselines = {};   // slide.id -> {start, end, hasAudio} (취소 시 복원)
+let _scMappingDeletions = {};   // slide.id -> true (삭제 예약)
+
+// content/title 변경 감지 — 편집 모드에선 슬라이드별 dirty 기록
+document.addEventListener('input', (e) => {
+    if (e.target.id === 'slide-content' || e.target.closest('#slide-content') || e.target.id === 'slide-title') {
+        _editDirty = true;
+        if (!_editMode) return;
+        var slide = SLIDES[currentSlide];
+        if (!slide) return;
+        if (!_editBaselines[slide.id]) {
+            _editBaselines[slide.id] = { content: slide.content, title: slide.title };
+        }
+        _editDirtySlides[slide.id] = true;
+        _updateEditBadge();
+    }
+});
+
+// 현재 슬라이드의 편집 내용을 SLIDES[]로 인메모리 캡처 (페이지 이동 시 호출)
+function _captureCurrentEdit() {
+    if (!_editMode) return;
+    var slide = SLIDES[currentSlide];
+    if (!slide || !_editDirtySlides[slide.id]) return;
+    var contentEl = document.getElementById('slide-content');
+    var titleEl = document.getElementById('slide-title');
+    if (!contentEl || !titleEl) return;
+    // 메모 패널은 content에 포함되지 않도록 clone에서 제거 (live DOM 건드리지 않음)
+    var clone = contentEl.cloneNode(true);
+    var memoInClone = clone.querySelector('.memo-panel');
+    if (memoInClone) memoInClone.remove();
+    slide.content = clone.innerHTML;
+    slide.title = titleEl.textContent;
+    // 목차 제목 갱신
+    var idxItem = document.querySelectorAll('#index-list .index-item')[currentSlide];
+    if (idxItem) { var t1 = idxItem.querySelector('.idx-title'); if (t1) t1.textContent = slide.title; }
+    var ovItem = document.querySelectorAll('#index-overlay-list .index-item')[currentSlide];
+    if (ovItem) { var t2 = ovItem.querySelector('.idx-title'); if (t2) t2.textContent = slide.title; }
+}
+
+function _updateEditBadge() {
+    var stat = document.getElementById('edit-save-status');
+    if (!stat) return;
+    // 활성 모드의 dirty만 카운트 (교안/매핑 상태 독립)
+    var n = 0;
+    if (_editMode) {
+        n = Object.keys(_editDirtySlides).length;
+    } else if (_mappingMode) {
+        var ids = {};
+        Object.keys(_scDirtyMappings).forEach(function(k) { ids[k] = true; });
+        Object.keys(_scMappingDeletions).forEach(function(k) { ids[k] = true; });
+        n = Object.keys(ids).length;
+    }
+    if (n > 0) {
+        stat.textContent = n + '개 미저장';
+        stat.classList.add('pending');
+    } else {
+        stat.classList.remove('pending');
+        stat.textContent = '저장됨';
+    }
+}
+
+// 탭 닫기 / 새로고침 시에만 네이티브 경고 (페이지 내 이동은 인메모리 유지)
+window.addEventListener('beforeunload', function(e) {
+    var hasDirty = false;
+    if (_editMode) {
+        hasDirty = Object.keys(_editDirtySlides).length > 0;
+    } else if (_mappingMode) {
+        hasDirty = Object.keys(_scDirtyMappings).length > 0
+                || Object.keys(_scMappingDeletions).length > 0;
+    }
+    if (hasDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+async function saveEdit() {
+    // 현재 슬라이드 편집분을 먼저 캡처 (교안 모드에서만 contentEditable 존재)
+    if (_editMode) _captureCurrentEdit();
+    var failed = [];
+
+    // --- 교안 편집 저장 (교안 모드에서만) ---
+    if (_editMode) {
+        var dirtyIds = Object.keys(_editDirtySlides);
+        for (var i = 0; i < dirtyIds.length; i++) {
+            var slideId = dirtyIds[i];
+            var slide = SLIDES.find(function(s) { return s.id === slideId; });
+            if (!slide) { delete _editDirtySlides[slideId]; continue; }
+            try {
+                var res = await fetch(
+                    SC_API + '/api/edit/' + encodeURIComponent(SC_REPO) + '/' + slide.id,
+                    {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: slide.content, title: slide.title }),
+                    }
+                );
+                if (!res.ok) throw new Error('저장 실패');
+                _scData.edits[slide.id] = { content: slide.content, title: slide.title, updatedAt: new Date().toISOString() };
+                delete _editDirtySlides[slide.id];
+                delete _editBaselines[slide.id];
+            } catch (e) {
+                failed.push(slide.id);
+            }
+        }
+    }
+
+    // --- 매핑 편집 저장 + 삭제 (매핑 모드에서만) ---
+    if (_mappingMode) {
+        var mapDirtyIds = Object.keys(_scDirtyMappings);
+        for (var mi = 0; mi < mapDirtyIds.length; mi++) {
+            var mSlideId = mapDirtyIds[mi];
+            var mSlide = SLIDES.find(function(s) { return s.id === mSlideId; });
+            if (!mSlide || !mSlide.hasAudio || mSlide.start === null || mSlide.end === null) {
+                delete _scDirtyMappings[mSlideId];
+                continue;
+            }
+            try {
+                var mRes = await fetch(
+                    SC_API + '/api/mapping/' + encodeURIComponent(SC_REPO) + '/' + mSlideId,
+                    {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ start: mSlide.start, end: mSlide.end }),
+                    }
+                );
+                if (!mRes.ok) throw new Error('매핑 저장 실패');
+                if (!_scData.mappingEdits) _scData.mappingEdits = {};
+                _scData.mappingEdits[mSlideId] = {
+                    start: mSlide.start, end: mSlide.end,
+                    updatedAt: new Date().toISOString(),
+                };
+                delete _scDirtyMappings[mSlideId];
+                delete _scMappingBaselines[mSlideId];
+            } catch (e) {
+                failed.push(mSlideId + '(매핑)');
+            }
+        }
+
+        var mapDelIds = Object.keys(_scMappingDeletions);
+        for (var di = 0; di < mapDelIds.length; di++) {
+            var dSlideId = mapDelIds[di];
+            try {
+                var dRes = await fetch(
+                    SC_API + '/api/mapping/' + encodeURIComponent(SC_REPO) + '/' + dSlideId,
+                    {
+                        method: 'PUT',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hasAudio: false }),
+                    }
+                );
+                if (!dRes.ok) throw new Error('매핑 강등 실패');
+                if (!_scData.mappingEdits) _scData.mappingEdits = {};
+                _scData.mappingEdits[dSlideId] = {
+                    hasAudio: false,
+                    updatedAt: new Date().toISOString(),
+                };
+                delete _scMappingDeletions[dSlideId];
+                delete _scMappingBaselines[dSlideId];
+            } catch (e) {
+                failed.push(dSlideId + '(매핑삭제)');
+            }
+        }
+    }
+
+    // --- 재빌드 및 상태 표시 (공통) ---
+    if (typeof window._scRebuildAudioStructures === 'function') {
+        window._scRebuildAudioStructures();
+    }
+    _editDirty = Object.keys(_editDirtySlides).length > 0;
+    _updateEditBadge();
+    if (failed.length === 0) {
+        var stat = document.getElementById('edit-save-status');
+        if (stat) {
+            stat.classList.remove('pending');
+            stat.textContent = '저장됨';
+            stat.style.opacity = '1';
+            setTimeout(function() { stat.style.opacity = ''; }, 2500);
+        }
+    } else {
+        var err = document.getElementById('edit-save-error');
+        if (err) { err.style.opacity = '1'; setTimeout(function() { err.style.opacity = ''; }, 3000); }
+    }
+}
+
+function cancelEdit() {
+    // 교안 편집 복원 (교안 모드에서만)
+    if (_editMode) {
+        Object.keys(_editBaselines).forEach(function(slideId) {
+            var slide = SLIDES.find(function(s) { return s.id === slideId; });
+            if (!slide) return;
+            var base = _editBaselines[slideId];
+            slide.content = base.content;
+            slide.title = base.title;
+        });
+        _editDirtySlides = {};
+        _editBaselines = {};
+        _editDirty = false;
+    }
+
+    // 매핑 편집 복원 (매핑 모드에서만)
+    if (_mappingMode) {
+        Object.keys(_scMappingBaselines).forEach(function(slideId) {
+            var slide = SLIDES.find(function(s) { return s.id === slideId; });
+            if (!slide) return;
+            var base = _scMappingBaselines[slideId];
+            slide.start = base.start;
+            slide.end = base.end;
+            slide.hasAudio = base.hasAudio;
+        });
+        _scDirtyMappings = {};
+        _scMappingBaselines = {};
+        _scMappingDeletions = {};
+    }
+
+    _updateEditBadge();
+
+    // 현재 슬라이드 DOM 복원 (교안 모드에서만 — 매핑 모드는 contentEditable이 아니라 DOM이 이미 원본)
+    var slide = SLIDES[currentSlide];
+    if (slide && _editMode) {
+        var contentEl = document.getElementById('slide-content');
+        var titleEl = document.getElementById('slide-title');
+        if (contentEl) contentEl.innerHTML = slide.content;
+        if (titleEl) titleEl.textContent = slide.title;
+    }
+    if (typeof _refreshTocTitles === 'function') _refreshTocTitles();
+    if (typeof window._scRebuildAudioStructures === 'function') {
+        window._scRebuildAudioStructures();
+    }
+    // 메모 패널 재생성 (교안 모드에서만)
+    if (_editMode) {
+        var oldMemo = document.querySelector('.memo-panel');
+        if (oldMemo) oldMemo.remove();
+        if (_scLoaded && slide) {
+            buildMemoPanel();
+        }
+    }
+}
+
+// ========== 메모 UI ==========
+let _memoTimers = {};
+
+function buildMemoPanel() {
+    // 기존 메모 패널 제거
+    var old = document.querySelector('.memo-panel');
+    if (old) old.remove();
+
+    var slide = SLIDES[currentSlide];
+    var memoData = _scData.memos[slide.id];
+    var canEdit = _editMode && _scData.isAdmin;
+
+    var panel = document.createElement('div');
+    panel.className = 'memo-panel' + (memoData ? ' has-memo open' : '');
+
+    var memoIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+
+    panel.innerHTML = '<div class="memo-header">' +
+        memoIcon + ' 메모' + (memoData ? '' : ' (없음)') +
+        '</div>' +
+        '<div class="memo-body">' +
+        '<textarea class="memo-text" placeholder="메모를 입력하세요..."' +
+        (canEdit ? '' : ' readonly') + '>' + (memoData ? memoData.text : '') + '</textarea>' +
+        '<div class="memo-saved" id="memo-saved">저장됨</div>' +
+        '</div>';
+
+    // textarea 내용에 맞게 높이 자동 조절
+    function _autoResizeMemo(el) {
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+
+    // 헤더 클릭 시 패널 열기/닫기 (열릴 때 높이 재계산 — display:none 상태에서는 scrollHeight=0)
+    panel.querySelector('.memo-header').addEventListener('click', function() {
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) {
+            _autoResizeMemo(panel.querySelector('.memo-text'));
+        }
+    });
+
+    // slide-content 다음 형제로 삽입
+    var contentEl = document.getElementById('slide-content');
+    contentEl.parentNode.insertBefore(panel, contentEl.nextSibling);
+
+    var textarea = panel.querySelector('.memo-text');
+
+    // 초기 렌더 시(패널이 열려있으면) 높이 자동 조절
+    if (panel.classList.contains('open')) {
+        _autoResizeMemo(textarea);
+    }
+
+    // 입력 시 높이 자동 조절 + 편집 가능할 때만 자동 저장
+    textarea.addEventListener('input', function() {
+        _autoResizeMemo(textarea);
+        if (canEdit) {
+            var sid = slide.id;
+            clearTimeout(_memoTimers[sid]);
+            _memoTimers[sid] = setTimeout(function() { saveMemo(sid, textarea.value); }, 1000);
+        }
+    });
+}
+
+async function saveMemo(sectionId, text) {
+    try {
+        if (text.trim() === '') {
+            await fetch(SC_API + '/api/memo/' + encodeURIComponent(SC_REPO) + '/' + sectionId, {
+                method: 'DELETE', credentials: 'include',
+            });
+            delete _scData.memos[sectionId];
+        } else {
+            var res = await fetch(SC_API + '/api/memo/' + encodeURIComponent(SC_REPO) + '/' + sectionId, {
+                method: 'PUT', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text }),
+            });
+            if (!res.ok) throw new Error('저장 실패');
+            _scData.memos[sectionId] = { text: text, updatedAt: new Date().toISOString() };
+        }
+        var saved = document.getElementById('memo-saved');
+        if (saved) { saved.classList.add('visible'); setTimeout(function() { saved.classList.remove('visible'); }, 2000); }
+    } catch (e) {
+        console.warn('메모 저장 실패:', e);
+    }
+}
+
+(function() { // IIFE 래핑 — 전역 오염 방지
+let currentSlide = 0;
+let isAutoSync = true;
+let lastSubIdx = -1;
+// 이전 active 엘리먼트 캐싱 (querySelectorAll 제거)
+let _prevNavDot = null;
+let _prevIndexItem = null;
+let _prevMapSeg = null;
+const audio = document.getElementById('audio');
+const playBtn = document.getElementById('play-btn');
+const ICON_PLAY  = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M1 1.5L11 7L1 12.5V1.5Z" fill="currentColor"/></svg>';
+const ICON_PAUSE = '<svg width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="1" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="7.5" y="1" width="3.5" height="12" rx="1" fill="currentColor"/></svg>';
+const timeDisplay = document.getElementById('time-display');
+const seekBar = document.getElementById('seek-bar');
+// DOM 참조 캐싱
+const _navDots = [];
+const _indexItems = [];
+const _overlayItems = [];
+const _mapSegments = [];
+// RAF 스로틀링
+let _rafPending = false;
+
+// 오디오 포함 슬라이드를 시작시간 순으로 정렬한 인덱스 (동기화용)
+// 매핑 편집 시 재계산이 필요하므로 let
+let audioSlides = [];
+function _scRecomputeAudioSlides() {
+    audioSlides = SLIDES
+        .map((s, i) => ({idx: i, start: s.start, end: s.end, hasAudio: s.hasAudio}))
+        .filter(s => s.hasAudio && s.start !== null)
+        .sort((a, b) => a.start - b.start);
+}
+_scRecomputeAudioSlides();
+
+function init() {
+    buildNav();
+    buildIndex();
+    buildAudioMap();
+    // SC_REPO 있으면 loadOverlayData가 KV 적용 후 첫 렌더 (원본 flash 방지)
+    if (!SC_REPO) showSlide(0);
+    audio.addEventListener('timeupdate', () => {
+        if (_rafPending) return;
+        _rafPending = true;
+        requestAnimationFrame(() => { _rafPending = false; onTimeUpdate(); });
+    });
+    // 오디오 메타데이터 로드 시 시크바 max 갱신
+    audio.addEventListener('loadedmetadata', updateSeekBarMax);
+    audio.addEventListener('durationchange', updateSeekBarMax);
+    // canplay 이벤트도 대비 (일부 브라우저/포맷에서 loadedmetadata가 늦게 발생)
+    audio.addEventListener('canplay', updateSeekBarMax);
+    // 슬라이더 드래그 시: 오디오 위치 이동 + 즉시 슬라이드 동기화
+    seekBar.addEventListener('input', () => {
+        audio.currentTime = seekBar.value;
+        updateSubtitle(audio.currentTime);
+        if (_mappingMode) { _scHighlightAudioMapAt(audio.currentTime); return; }
+        isAutoSync = true;
+        syncSlideToTime(audio.currentTime);
+    });
+    // 일시정지 상태에서 seek 완료 시에도 슬라이드 동기화
+    audio.addEventListener('seeked', () => {
+        updateTimeDisplay();
+        updateSubtitle(audio.currentTime);
+        if (_mappingMode) { _scHighlightAudioMapAt(audio.currentTime); return; }
+        syncSlideToTime(audio.currentTime);
+    });
+    // 모바일: 메타데이터 미로드 시 로딩 상태 표시
+    if (!audio.duration || !isFinite(audio.duration)) {
+        playBtn.classList.add('loading');
+        timeDisplay.classList.add('loading');
+        timeDisplay.textContent = '로딩 중...';
+    }
+}
+
+function updateSeekBarMax() {
+    if (audio.duration && isFinite(audio.duration)) {
+        seekBar.max = audio.duration;
+        updateTimeDisplay();
+        playBtn.classList.remove('loading');
+        timeDisplay.classList.remove('loading');
+    }
+}
+
+function buildNav() {
+    const nav = document.getElementById('slide-nav');
+    SLIDES.forEach((slide, i) => {
+        const dot = document.createElement('button');
+        dot.className = 'nav-dot ' + (slide.hasAudio ? 'has-audio' : 'no-audio');
+        dot.textContent = slide.id.replace('P', '');
+        dot.title = slide.id + ' — ' + slide.title;
+        dot.onclick = () => { isAutoSync = false; showSlide(i); };
+        nav.appendChild(dot);
+        _navDots.push(dot);
+    });
+}
+
+function _buildIndexItem(slide, container) {
+    const item = document.createElement('div');
+    item.className = 'index-item' + (slide.hasAudio ? ' has-audio' : '');
+    const idSpan = document.createElement('span');
+    idSpan.className = 'idx-id';
+    idSpan.textContent = slide.id;
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'idx-title';
+    titleSpan.textContent = slide.title;
+    item.appendChild(idSpan);
+    item.appendChild(titleSpan);
+    container.appendChild(item);
+    return item;
+}
+
+function buildIndex() {
+    const list = document.getElementById('index-list');
+    SLIDES.forEach((slide, i) => {
+        const item = _buildIndexItem(slide, list);
+        item.onclick = () => { isAutoSync = false; showSlide(i); };
+        _indexItems.push(item);
+    });
+}
+
+// URL ?q= 파라미터로 전달된 키워드가 포함된 목차 항목 하이라이트
+function highlightKeywordMatches() {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (!q) return;
+    const kw = q.trim().replace(/\s/g, '').toLowerCase();
+    if (!kw) return;
+    SLIDES.forEach((slide, i) => {
+        // HTML 태그 제거 후 띄어쓰기 제거 + 소문자 변환
+        const text = (slide.title + ' ' + slide.content.replace(/<[^>]*>/g, ''))
+            .replace(/\s/g, '').toLowerCase();
+        if (text.indexOf(kw) !== -1) {
+            if (_indexItems[i]) _indexItems[i].classList.add('keyword-match');
+            if (_overlayItems[i]) _overlayItems[i].classList.add('keyword-match');
+        }
+    });
+}
+
+function buildAudioMap() {
+    const map = document.getElementById('audio-map');
+    if (!map) return;
+    // 재호출 대응: 기존 DOM·캐시 배열 클리어
+    map.innerHTML = '';
+    _mapSegments.length = 0;
+    _prevMapSeg = null;
+    let prevEnd = 0;
+    audioSlides.forEach((s, i) => {
+        const slide = SLIDES[s.idx];
+        const duration = s.end - s.start;
+        // 시간 갭이 있으면 빈 공간 삽입
+        if (s.start > prevEnd + 1) {
+            const gap = document.createElement('div');
+            gap.className = 'map-gap';
+            gap.style.flexGrow = (s.start - prevEnd).toFixed(1);
+            map.appendChild(gap);
+        }
+        const seg = document.createElement('div');
+        seg.className = 'map-segment';
+        seg.dataset.idx = s.idx;
+        seg.style.flexGrow = duration.toFixed(1);
+        seg.textContent = slide.id.replace('P', '');
+        seg.title = slide.id + ' — ' + slide.title;
+        seg.onclick = () => {
+            audio.currentTime = s.start;
+            isAutoSync = true;
+            syncSlideToTime(s.start);
+        };
+        map.appendChild(seg);
+        _mapSegments.push({el: seg, idx: s.idx});
+        prevEnd = s.end;
+    });
+}
+
+// 매핑 편집 반영: audioSlides 재계산 → audioMap 재빌드 → nav/index 클래스 + 뱃지 갱신.
+// showSlide 재호출은 피한다 — 같은 인덱스 재호출 시 _captureCurrentEdit가 안 불려
+// 편집 중 미캡처 타이핑이 날아갈 수 있기 때문. 뱃지·매핑바만 직접 갱신한다.
+function _scRebuildAudioStructures() {
+    _scRecomputeAudioSlides();
+    buildAudioMap();
+    // nav dot의 has-audio/no-audio 클래스 재설정
+    SLIDES.forEach(function(slide, i) {
+        var dot = _navDots[i];
+        if (!dot) return;
+        dot.classList.toggle('has-audio', !!slide.hasAudio);
+        dot.classList.toggle('no-audio', !slide.hasAudio);
+    });
+    // index item의 has-audio 클래스 재설정
+    SLIDES.forEach(function(slide, i) {
+        var item = _indexItems[i];
+        if (item) item.classList.toggle('has-audio', !!slide.hasAudio);
+        var ov = _overlayItems[i];
+        if (ov) ov.classList.toggle('has-audio', !!slide.hasAudio);
+    });
+    // 현재 슬라이드의 '교안 전용' 뱃지 수동 갱신 (slide-content 건드리지 않음)
+    var cur = SLIDES[currentSlide];
+    var badge = document.getElementById('slide-badge');
+    if (cur && badge) {
+        if (cur.hasAudio) {
+            badge.textContent = '';
+            badge.className = '';
+            badge.style.display = 'none';
+        } else {
+            badge.textContent = '교안 전용';
+            badge.className = 'badge-no-audio';
+            badge.style.display = '';
+        }
+    }
+    // 현재 활성 map segment 재하이라이트: 매핑 모드는 재생 위치 기준, 그 외는 현재 슬라이드 기준
+    if (_mappingMode && typeof _scHighlightAudioMapAt === 'function') {
+        _scHighlightAudioMapAt(audio.currentTime);
+    } else if (typeof updateAudioMap === 'function') {
+        updateAudioMap(currentSlide);
+    }
+    // 매핑 편집 모드면 컨트롤 바도 재렌더 (Task 6에서 정의)
+    if (typeof _scRenderMappingBar === 'function') _scRenderMappingBar();
+}
+
+// 수평 스크롤 컨테이너 내 요소를 가운데로 스크롤 (양끝단은 끄트머리 정렬)
+function _scrollDotCenter(container, el) {
+    if (!container || !el) return;
+    var target = el.offsetLeft - (container.clientWidth - el.offsetWidth) / 2;
+    container.scrollTo({ left: target, behavior: 'smooth' });
+}
+
+function updateAudioMap(currentIdx) {
+    if (_prevMapSeg) _prevMapSeg.classList.remove('active');
+    var oldSeg = _prevMapSeg;
+    _prevMapSeg = null;
+    for (let i = 0; i < _mapSegments.length; i++) {
+        if (_mapSegments[i].idx === currentIdx) {
+            _mapSegments[i].el.classList.add('active');
+            _prevMapSeg = _mapSegments[i].el;
+            if (_prevMapSeg !== oldSeg) _scrollDotCenter(document.getElementById('audio-map'), _prevMapSeg);
+            break;
+        }
+    }
+}
+
+function showSlide(index) {
+    if (index < 0 || index >= SLIDES.length) return;
+    // 편집 모드: 이전 슬라이드의 편집 내용을 인메모리 캡처 (자막편집과 동일 방식)
+    if (_editMode && currentSlide !== index) {
+        _captureCurrentEdit();
+    }
+    currentSlide = index;
+    const slide = SLIDES[index];
+    document.getElementById('slide-id').textContent = slide.id;
+    document.getElementById('slide-title').textContent = slide.title;
+    const contentEl = document.getElementById('slide-content');
+    contentEl.style.animation = 'none';
+    contentEl.offsetHeight; // 리플로우 트리거
+    contentEl.style.animation = '';
+    contentEl.innerHTML = slide.content;
+    const badge = document.getElementById('slide-badge');
+    if (slide.hasAudio) {
+        badge.textContent = '';
+        badge.className = '';
+        badge.style.display = 'none';
+    } else {
+        badge.textContent = '교안 전용';
+        badge.className = 'badge-no-audio';
+        badge.style.display = '';
+    }
+    // 네비게이션 도트 활성화 (캐싱) + 가운데 스크롤
+    if (_prevNavDot) _prevNavDot.classList.remove('active');
+    if (_navDots[index]) { _navDots[index].classList.add('active'); _prevNavDot = _navDots[index]; }
+    _scrollDotCenter(document.getElementById('slide-nav'), _navDots[index]);
+    // 인덱스 패널 활성화 (캐싱)
+    if (_prevIndexItem) _prevIndexItem.classList.remove('active');
+    if (_indexItems[index]) {
+        _indexItems[index].classList.add('active');
+        _indexItems[index].scrollIntoView({block: 'nearest', behavior: 'smooth'});
+        _prevIndexItem = _indexItems[index];
+    }
+    // 오디오 맵 활성화
+    if (_mappingMode) {
+        // 매핑 편집 모드: 슬라이드 인덱스가 아니라 재생 위치 기준 하이라이트
+        _scHighlightAudioMapAt(audio.currentTime);
+    } else {
+        updateAudioMap(index);
+    }
+    // 모바일 FAB: 첫/끝 슬라이드에서 이동 불가 버튼 숨김 (레이아웃 유지)
+    var _navPrev = document.getElementById('nav-prev');
+    var _navNext = document.getElementById('nav-next');
+    if (_navPrev) _navPrev.style.visibility = (index === 0) ? 'hidden' : '';
+    if (_navNext) _navNext.style.visibility = (index === SLIDES.length - 1) ? 'hidden' : '';
+
+    // 편집 모드: contenteditable 유지
+    if (_editMode) {
+        document.getElementById('slide-content').contentEditable = 'true';
+        document.getElementById('slide-title').contentEditable = 'true';
+    }
+    // 메모 패널: 이전 패널 항상 제거 후 조건부 재생성
+    var oldMemo = document.querySelector('.memo-panel');
+    if (oldMemo) oldMemo.remove();
+    if (_scLoaded && (_editMode || (_scData.memos && _scData.memos[slide.id]))) {
+        buildMemoPanel();
+    }
+
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    // 매핑 편집 모드면 컨트롤 바 갱신
+    if (typeof _scRenderMappingBar === 'function') _scRenderMappingBar();
+}
+
+// 시간 기반 슬라이드 동기화 (바이너리 서치)
+// end 필드는 동기화에 미사용 — mapping.json의 overlap/역전/end 오염에 구조적으로 강건.
+// "구간 포함(start<=t<end)" 로직으로 바꾸지 말 것. 86개 누적 이슈가 즉시 표면화됨.
+// 상세: .files/2026-04-09-mapping-audit.md
+function syncSlideToTime(t) {
+    let lo = 0, hi = audioSlides.length - 1, result = -1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (audioSlides[mid].start <= t) { result = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+    }
+    const targetIdx = result >= 0 ? audioSlides[result].idx : -1;
+    if (targetIdx >= 0 && targetIdx !== currentSlide) {
+        showSlide(targetIdx);
+    }
+}
+
+// 매핑 편집 모드 전용: 슬라이드 이동 없이 오디오 맵 도트만 하이라이트
+function _scHighlightAudioMapAt(t) {
+    let lo = 0, hi = audioSlides.length - 1, result = -1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (audioSlides[mid].start <= t) { result = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+    }
+    const targetIdx = result >= 0 ? audioSlides[result].idx : -1;
+    // -1 전달 시에도 updateAudioMap이 _prevMapSeg를 정리하므로 스테일 하이라이트 방지
+    updateAudioMap(targetIdx);
+}
+
+function onTimeUpdate() {
+    const t = audio.currentTime;
+    seekBar.value = t;
+    updateTimeDisplay();
+    updateSubtitle(t);
+    if (_subtitleMode) _steSyncHighlight(t);
+    if (_mappingMode) { _scHighlightAudioMapAt(t); return; }
+    if (!isAutoSync) return;
+    syncSlideToTime(t);
+}
+
+function updateTimeDisplay() {
+    const cur = formatTime(audio.currentTime);
+    const dur = formatTime(audio.duration || 0);
+    timeDisplay.textContent = cur + ' / ' + dur;
+}
+
+function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function togglePlay() {
+    if (audio.paused) {
+        var p = audio.play(); if (p && p.catch) p.catch(function(){});
+        playBtn.innerHTML = ICON_PAUSE;
+        isAutoSync = true;
+    } else {
+        audio.pause();
+        playBtn.innerHTML = ICON_PLAY;
+    }
+}
+
+function changeSpeed(val) {
+    audio.playbackRate = parseFloat(val);
+}
+
+function skipTime(sec) {
+    audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + sec));
+}
+
+const SPEED_STEPS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+document.addEventListener('keydown', (e) => {
+    // 자막 편집 모드: Ctrl+S만 인터셉트, 나머지 비활성화
+    if (_subtitleMode) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            if (typeof _steSave === 'function') _steSave();
+        }
+        return;
+    }
+    // 매핑 편집 모드: Ctrl+S만 인터셉트, 나머지(Space/Arrow/+/-)는 기본 경로 fall-through
+    if (_mappingMode && (e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (typeof saveEdit === 'function') saveEdit();
+        return;
+    }
+    // 교안 편집 모드: Shift/Ctrl 조합만 플레이어·네비·저장으로 인터셉트, 일반 키는 편집 기본 동작(커서 이동·공백 입력) 유지
+    if (_editMode) {
+        // Ctrl/Cmd+S → 저장 (브라우저 기본 저장 다이얼로그 차단)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            if (typeof saveEdit === 'function') saveEdit();
+            return;
+        }
+        // Shift+Space → 오디오 재생/정지 토글
+        if (e.shiftKey && e.code === 'Space') {
+            e.preventDefault();
+            togglePlay();
+            return;
+        }
+        // Shift+←/→ → 이전/다음 슬라이드 (인메모리 편집분은 기존 _captureCurrentEdit 경로로 자동 보존)
+        if (e.shiftKey && e.code === 'ArrowLeft') {
+            e.preventDefault();
+            showSlide(currentSlide - 1);
+            isAutoSync = false;
+            return;
+        }
+        if (e.shiftKey && e.code === 'ArrowRight') {
+            e.preventDefault();
+            showSlide(currentSlide + 1);
+            isAutoSync = false;
+            return;
+        }
+        return;
+    }
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    if (e.code === 'ArrowLeft') { showSlide(currentSlide - 1); isAutoSync = false; }
+    if (e.code === 'ArrowRight') { showSlide(currentSlide + 1); isAutoSync = false; }
+    if (e.key === '-' || e.key === '_') {
+        const cur = SPEED_STEPS.indexOf(audio.playbackRate);
+        const idx = cur > 0 ? cur - 1 : 0;
+        audio.playbackRate = SPEED_STEPS[idx];
+        document.getElementById('speed-select').value = SPEED_STEPS[idx];
+    }
+    if (e.key === '=' || e.key === '+') {
+        const cur = SPEED_STEPS.indexOf(audio.playbackRate);
+        const idx = cur < SPEED_STEPS.length - 1 ? (cur === -1 ? 2 : cur + 1) : SPEED_STEPS.length - 1;
+        audio.playbackRate = SPEED_STEPS[idx];
+        document.getElementById('speed-select').value = SPEED_STEPS[idx];
+    }
+});
+
+function updateSubtitle(t) {
+    if (typeof TRANSCRIPT === 'undefined' || TRANSCRIPT.length === 0) return;
+    const idx = findTranscriptIdx(t);
+    if (idx === lastSubIdx) return;
+    lastSubIdx = idx;
+    const el = document.getElementById('subtitle-text');
+    if (el) el.textContent = idx >= 0 ? TRANSCRIPT[idx].text : '';
+}
+
+function findTranscriptIdx(t) {
+    let lo = 0, hi = TRANSCRIPT.length - 1, result = -1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (TRANSCRIPT[mid].start <= t) { result = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+    }
+    if (result >= 0 && t <= TRANSCRIPT[result].end) return result;
+    return -1;
+}
+
+// 모바일 목차 오버레이
+function buildOverlayIndex() {
+    const list = document.getElementById('index-overlay-list');
+    if (!list) return;
+    SLIDES.forEach((slide, i) => {
+        const item = _buildIndexItem(slide, list);
+        item.onclick = () => { isAutoSync = false; showSlide(i); closeOverlay(); };
+        _overlayItems.push(item);
+    });
+}
+
+function openOverlay() {
+    const ov = document.getElementById('index-overlay');
+    ov.classList.add('open');
+    // 현재 슬라이드 하이라이트 (캐싱된 참조)
+    _overlayItems.forEach((item, i) => {
+        item.classList.toggle('active', i === currentSlide);
+        if (i === currentSlide) item.scrollIntoView({block: 'center', behavior: 'smooth'});
+    });
+}
+
+function closeOverlay() {
+    document.getElementById('index-overlay').classList.remove('open');
+}
+
+// 가로 스크롤 영역: 마우스 휠 → 가로 스크롤 변환
+document.querySelectorAll('#audio-map, #slide-nav').forEach(el => {
+    el.addEventListener('wheel', (e) => {
+        if (el.scrollWidth <= el.clientWidth) return; // 스크롤 불필요
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+    }, {passive: false});
+});
+
+init();
+buildOverlayIndex();
+highlightKeywordMatches();
+// ========== 자막 편집 모드 ==========
+var _steSegments = [];
+var _steOriginals = [];
+var _steCurrentIdx = -1;
+
+const STE_LS_KEY = 'subtitle_backup_' + SC_REPO;
+
+// 전역 keydown에서 자막 저장을 호출하기 위한 브릿지
+window._steSave = _steSave;
+// loadOverlayData(전역)에서 IIFE 내부 자막 편집 상태를 갱신하기 위한 브릿지
+window._steApplyOverlay = function(transcriptEdits) {
+    for (var segId in transcriptEdits) {
+        var idx = parseInt(segId);
+        if (idx < _steSegments.length) {
+            _steSegments[idx].text = transcriptEdits[segId];
+            _steOriginals[idx] = transcriptEdits[segId];
+        }
+    }
+    _steRender();
+    _steLsRestore();
+};
+
+function initSubtitleEdit() {
+    if (!_subtitleMode) return;
+    _editMode = false;
+
+    _steSegments = TRANSCRIPT.map((t, i) => ({ id: i, start: t.start, end: t.end, text: t.text }));
+    _steOriginals = TRANSCRIPT.map(t => t.text);
+
+    var subBox = document.getElementById('subtitle-box');
+    if (subBox) subBox.style.display = 'none';
+    var subCtrl = document.getElementById('sub-controls');
+    if (subCtrl) subCtrl.style.display = 'none';
+
+    document.getElementById('subtitle-edit-area').style.display = 'block';
+    document.getElementById('slide-area').style.display = 'none';
+
+    // 목차 패널 + 모바일 FAB 숨김
+    var idxPanel = document.getElementById('index-panel');
+    if (idxPanel) idxPanel.style.display = 'none';
+    var idxFab = document.getElementById('index-fab');
+    if (idxFab) idxFab.style.display = 'none';
+    var mobileFab = document.getElementById('mobile-fab-group');
+    if (mobileFab) mobileFab.style.display = 'none';
+
+    // 버튼 이벤트 바인딩 (IIFE 내부 함수 접근을 위해 addEventListener 사용)
+    document.getElementById('ste-save-btn').addEventListener('click', function() { _steSave(); });
+
+    var steSearchTimer;
+    document.getElementById('ste-search').addEventListener('input', function() {
+        clearTimeout(steSearchTimer);
+        steSearchTimer = setTimeout(function() { _steRender(); }, 150);
+    });
+
+    _steRender();
+}
+
+function _steGetVisibleSegments() {
+    return _steSegments;
+}
+
+function _steRender() {
+    var panel = document.getElementById('ste-panel');
+    panel.innerHTML = '';
+    var query = (document.getElementById('ste-search').value || '').trim().toLowerCase();
+    var segs = _steGetVisibleSegments();
+    var shown = 0;
+
+    segs.forEach(function(seg) {
+        if (query && !seg.text.toLowerCase().includes(query)) return;
+        shown++;
+
+        var row = document.createElement('div');
+        row.className = 'ste-row';
+        row.dataset.id = seg.id;
+        if (seg.text !== _steOriginals[seg.id]) row.classList.add('modified');
+
+        var ts = document.createElement('span');
+        ts.className = 'ste-ts';
+        ts.textContent = _steFmtTime(seg.start);
+        ts.title = _steFmtTime(seg.start) + ' ~ ' + _steFmtTime(seg.end);
+        ts.onclick = function() { audio.currentTime = seg.start; };
+
+        var ta = document.createElement('textarea');
+        ta.className = 'ste-text';
+        ta.value = seg.text;
+        ta.rows = 1;
+        ta.addEventListener('input', function() {
+            _steAutoResize(ta);
+            seg.text = ta.value;
+            TRANSCRIPT[seg.id].text = ta.value;
+            var modified = ta.value !== _steOriginals[seg.id];
+            row.classList.toggle('modified', modified);
+            _steUpdateBadge();
+            _steLsBackup();
+        });
+        ta.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                var next = panel.querySelector('.ste-row[data-id="' + (seg.id + 1) + '"] .ste-text');
+                if (next) { next.focus(); next.select(); }
+            }
+        });
+
+        row.appendChild(ts);
+        row.appendChild(ta);
+        panel.appendChild(row);
+    });
+
+    if (shown === 0) {
+        var empty = document.createElement('div');
+        empty.style.cssText = 'text-align:center;padding:40px 0;color:var(--text-muted);font-size:14px;';
+        empty.textContent = query ? '검색 결과 없음' : '자막이 없습니다.';
+        panel.appendChild(empty);
+    }
+
+    // DOM append 후 전체 textarea 높이 조정
+    requestAnimationFrame(function() {
+        panel.querySelectorAll('.ste-text').forEach(_steAutoResize);
+    });
+}
+
+function _steAutoResize(ta) {
+    ta.style.height = '0';
+    ta.style.height = ta.scrollHeight + 'px';
+}
+
+function _steUpdateBadge() {
+    var n = _steSegments.filter(function(s) { return s.text !== _steOriginals[s.id]; }).length;
+    var badge = document.getElementById('ste-change-badge');
+    badge.style.display = n > 0 ? 'inline-block' : 'none';
+    badge.textContent = n + '개 수정됨';
+    document.getElementById('ste-save-btn').disabled = (n === 0);
+}
+
+function _steFmtTime(s) {
+    if (!s || !isFinite(s)) return '0:00';
+    var m = Math.floor(s / 60);
+    var sec = Math.floor(s % 60);
+    return m + ':' + String(sec).padStart(2, '0');
+}
+
+function _steSyncHighlight(t) {
+    if (!_subtitleMode) return;
+    var idx = findTranscriptIdx(t);
+    if (idx === _steCurrentIdx) return;
+    _steCurrentIdx = idx;
+    var panel = document.getElementById('ste-panel');
+    var prev = panel.querySelector('.ste-row.active');
+    if (prev) prev.classList.remove('active');
+    if (idx >= 0) {
+        var row = panel.querySelector('.ste-row[data-id="' + idx + '"]');
+        if (row) {
+            row.classList.add('active');
+            if (document.activeElement && document.activeElement.className !== 'ste-text') {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }
+}
+
+function _steLsBackup() {
+    try {
+        var changed = {};
+        _steSegments.forEach(function(s) {
+            if (s.text !== _steOriginals[s.id]) changed[s.id] = s.text;
+        });
+        if (Object.keys(changed).length > 0) {
+            localStorage.setItem(STE_LS_KEY, JSON.stringify({ ts: Date.now(), changes: changed }));
+        } else {
+            localStorage.removeItem(STE_LS_KEY);
+        }
+    } catch(e) {}
+}
+
+function _steLsRestore() {
+    try {
+        var raw = localStorage.getItem(STE_LS_KEY);
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        var ago = Math.round((Date.now() - data.ts) / 60000);
+        var count = Object.keys(data.changes).length;
+        if (count === 0) return;
+        if (!confirm(count + '개의 미저장 자막 수정분이 있습니다 (' + ago + '분 전).\n복원할까요?')) {
+            localStorage.removeItem(STE_LS_KEY);
+            return;
+        }
+        for (var idStr in data.changes) {
+            var id = parseInt(idStr);
+            if (id < _steSegments.length) {
+                _steSegments[id].text = data.changes[idStr];
+                TRANSCRIPT[id].text = data.changes[idStr];
+            }
+        }
+        _steRender();
+        _steUpdateBadge();
+    } catch(e) {}
+}
+
+function _steLsClear() {
+    try { localStorage.removeItem(STE_LS_KEY); } catch(e) {}
+}
+
+async function _steSave() {
+    var btn = document.getElementById('ste-save-btn');
+    btn.disabled = true;
+    btn.textContent = '저장 중…';
+    try {
+        var changed = _steSegments.filter(function(s) { return s.text !== _steOriginals[s.id]; });
+        var res = await fetch(
+            SC_API + '/api/transcript/' + encodeURIComponent(SC_REPO),
+            {
+                method: 'PUT',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ segments: changed.map(function(s) { return { id: s.id, text: s.text }; }) })
+            }
+        );
+        if (!res.ok) throw new Error('저장 실패');
+        _steSegments.forEach(function(s) { _steOriginals[s.id] = s.text; });
+        document.querySelectorAll('.ste-row.modified').forEach(function(r) { r.classList.remove('modified'); });
+        _steUpdateBadge();
+        btn.textContent = '저장';
+        _steLsClear();
+        var stat = document.getElementById('ste-save-status');
+        stat.style.opacity = '1';
+        setTimeout(function() { stat.style.opacity = '0'; }, 2500);
+    } catch (e) {
+        alert('자막 저장 실패: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '저장';
+    }
+}
+
+initSubtitleEdit();
+initEditMode();
+initMappingMode();
+loadOverlayData();
+initSubtitleControls();
+
+// ========== 플로팅 자막 드래그 + 컨트롤 ==========
+function initSubtitleControls() {
+    const box = document.getElementById('subtitle-box');
+    if (!box) return;
+    const mobileQuery = window.matchMedia('(max-width: 900px)');
+    let isMobile = mobileQuery.matches;
+    mobileQuery.addEventListener('change', (e) => { isMobile = e.matches; });
+
+    // localStorage에서 설정 복원
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('sc-sub-settings') || '{}'); } catch(e) {}
+    let fontSize = saved.fontSize || 16;
+    let posMode = saved.posMode || 'bottom'; // bottom, top, overlay, hidden, free
+    let freeX = saved.freeX;
+    let freeY = saved.freeY;
+    let freeW = saved.freeW;
+
+    const subText = document.getElementById('subtitle-text');
+    subText.style.fontSize = fontSize + 'px';
+
+    // 위치 모드 적용
+    function applyPos(mode) {
+        posMode = mode;
+        box.classList.remove('free', 'hidden');
+        if (mode === 'hidden') {
+            box.classList.add('hidden');
+        } else if (mode === 'free') {
+            box.classList.add('free');
+            box.style.left = (freeX || 100) + 'px';
+            box.style.top = (freeY || (window.innerHeight - 100)) + 'px';
+            box.style.bottom = 'auto';
+            box.style.transform = 'none';
+            if (freeW) box.style.width = freeW + 'px';
+        } else {
+            // bottom (기본)
+            box.style.left = '50%'; box.style.top = '';
+            box.style.bottom = (window.innerWidth <= 900 ? '56px' : '20px'); box.style.transform = 'translateX(-50%)';
+            box.style.width = '';
+        }
+        saveSettings();
+        document.getElementById('sub-hide-btn').classList.toggle('active', mode !== 'hidden');
+    }
+
+    function saveSettings() {
+        try {
+            const r = box.getBoundingClientRect();
+            localStorage.setItem('sc-sub-settings', JSON.stringify({
+                fontSize, posMode, ccMode,
+                freeX: posMode === 'free' ? r.left : freeX,
+                freeY: posMode === 'free' ? r.top : freeY,
+                freeW: posMode === 'free' ? r.width : freeW,
+            }));
+        } catch(e) {}
+    }
+
+    // 위치 전환 버튼: bottom↔free
+    const posIcon = document.getElementById('sub-pos-icon');
+    function updatePosIcon() {
+        const svgMove = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3"/></svg>';
+        const svgVert = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M5 5l7-3 7 3M5 19l7 3 7-3"/></svg>';
+        const svgDock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M3 3h18v7H3z" opacity="0.3"/></svg>';
+        if (isMobile) { posIcon.innerHTML = posMode === 'free' ? svgVert : svgDock; }
+        else { posIcon.innerHTML = posMode === 'free' ? svgDock : svgMove; }
+    }
+    document.getElementById('sub-pos-btn').onclick = () => {
+        if (posMode === 'hidden') { applyPos('bottom'); }
+        else { applyPos(posMode === 'bottom' ? 'free' : 'bottom'); }
+        updatePosIcon();
+    };
+    mobileQuery.addEventListener('change', updatePosIcon);
+
+    // 폰트 크기
+    document.getElementById('sub-size-up').onclick = () => {
+        fontSize = Math.min(28, fontSize + 2);
+        subText.style.fontSize = fontSize + 'px';
+        saveSettings();
+    };
+    document.getElementById('sub-size-dn').onclick = () => {
+        fontSize = Math.max(10, fontSize - 2);
+        subText.style.fontSize = fontSize + 'px';
+        saveSettings();
+    };
+
+    // CC 모드: default → text-only → hidden
+    let ccMode = saved.ccMode || 'default';
+    const ccModes = ['default', 'text-only', 'hidden'];
+
+    function applyCcMode(mode) {
+        ccMode = mode;
+        box.classList.remove('hidden', 'text-only');
+        if (mode === 'hidden') {
+            box.classList.add('hidden');
+        } else if (mode === 'text-only') {
+            box.classList.add('text-only');
+        }
+        const btn = document.getElementById('sub-hide-btn');
+        btn.style.opacity = mode === 'hidden' ? '0.4' : mode === 'text-only' ? '0.7' : '1';
+        btn.classList.toggle('active', mode === 'default');
+        saveSettings();
+    }
+
+    document.getElementById('sub-hide-btn').onclick = () => {
+        const idx = ccModes.indexOf(ccMode);
+        applyCcMode(ccModes[(idx + 1) % ccModes.length]);
+    };
+    applyCcMode(ccMode);
+
+    // PC 드래그 (free 모드)
+    let dragStartX, dragStartY, boxStartX, boxStartY, isDragging = false;
+
+    // 마우스 드래그 (PC: 자유 이동, 모바일 규격: 수직만)
+    box.addEventListener('mousedown', (e) => {
+        if (posMode !== 'free' || e.target.tagName === 'BUTTON') return;
+        isDragging = true;
+        box.classList.add('dragging');
+        dragStartX = e.clientX; dragStartY = e.clientY;
+        const r = box.getBoundingClientRect();
+        boxStartX = r.left; boxStartY = r.top;
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dy = e.clientY - dragStartY;
+        box.style.top = (boxStartY + dy) + 'px';
+        box.style.bottom = 'auto';
+        if (!isMobile) {
+            const dx = e.clientX - dragStartX;
+            box.style.left = (boxStartX + dx) + 'px';
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        box.classList.remove('dragging');
+        freeX = parseInt(box.style.left);
+        freeY = parseInt(box.style.top);
+        saveSettings();
+    });
+
+    // 모바일 터치 드래그 (free 모드 — 수직 이동만)
+    box.addEventListener('touchstart', (e) => {
+        if (posMode !== 'free') return;
+        isDragging = true;
+        box.classList.add('dragging');
+        const touch = e.touches[0];
+        dragStartY = touch.clientY;
+        const r = box.getBoundingClientRect();
+        boxStartY = r.top;
+    }, {passive: true});
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const newY = boxStartY + touch.clientY - dragStartY;
+        box.style.top = newY + 'px';
+        box.style.bottom = 'auto';
+        box.style.left = '50%';
+        box.style.transform = 'translateX(-50%)';
+    }, {passive: true});
+
+    document.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        box.classList.remove('dragging');
+        freeY = parseInt(box.style.top);
+        saveSettings();
+    });
+
+    // 초기 적용
+    applyPos(posMode);
+    updatePosIcon();
+}
+// showSlide/currentSlide를 모바일 FAB에서 접근 가능하도록 전역 노출
+// 전역 loadOverlayData에서 호출하는 목차 갱신 브릿지
+window._refreshTocTitles = function() {
+    SLIDES.forEach((s, i) => {
+        if (_indexItems[i]) _indexItems[i].querySelector('.idx-title').textContent = s.title;
+        if (_overlayItems[i]) _overlayItems[i].querySelector('.idx-title').textContent = s.title;
+    });
+};
+// loadOverlayData가 SLIDES를 KV 편집본으로 교체한 뒤 키워드 하이라이트 재계산
+window._rehighlightKeywordMatches = function() {
+    _indexItems.forEach(it => it && it.classList.remove('keyword-match'));
+    _overlayItems.forEach(it => it && it.classList.remove('keyword-match'));
+    highlightKeywordMatches();
+};
+// 현재 슬라이드의 매핑 컨트롤 바 렌더 (교안 편집 모드 전용)
+function _scRenderMappingBar() {
+    var bar = document.getElementById('mapping-bar');
+    if (!bar) return;
+    if (!_mappingMode) {
+        bar.classList.remove('active');
+        bar.style.display = 'none';
+        return;
+    }
+    var slide = SLIDES[currentSlide];
+    if (!slide) return;
+
+    document.getElementById('mb-section-id').textContent = slide.id;
+    var rangeEl = document.getElementById('mb-range');
+    if (slide.hasAudio && slide.start !== null && slide.end !== null) {
+        var dur = (slide.end - slide.start).toFixed(1);
+        rangeEl.textContent = '매핑: ' + slide.start.toFixed(1) + 's ~ ' + slide.end.toFixed(1) + 's  (duration ' + dur + 's)';
+        rangeEl.classList.remove('empty');
+    } else {
+        rangeEl.textContent = '매핑 없음 (교안 전용)';
+        rangeEl.classList.add('empty');
+    }
+
+    // 버튼 활성화 조건: audio.duration이 유효한 finite 값
+    var durOk = isFinite(audio.duration) && audio.duration > 0;
+    document.getElementById('mb-set-start').disabled = !durOk;
+    document.getElementById('mb-set-end').disabled = !durOk;
+
+    bar.classList.add('active');
+    bar.style.display = 'flex';
+}
+
+window._scRenderMappingBar = _scRenderMappingBar;
+
+// 매핑 편집 핵심 로직
+// field: 'start' | 'end'
+function _scApplyMappingEdit(sectionIdx, field) {
+    var slide = SLIDES[sectionIdx];
+    if (!slide) return;
+
+
+    // 'start' or 'end': 현재 오디오 시점 T 사용
+    var T = audio.currentTime;
+    if (!isFinite(T) || T < 0) return;
+
+    // 검증: 반대쪽 끝과의 정합성
+    if (field === 'start' && slide.end !== null && T > slide.end) {
+        _scToast('시작이 끝보다 이후일 수 없습니다');
+        return;
+    }
+    if (field === 'end' && slide.start !== null && T < slide.start) {
+        _scToast('끝이 시작보다 이전일 수 없습니다');
+        return;
+    }
+
+    // No-op 감지: 새 값이 현재 값과 동일하면 아무 것도 하지 않음 (경계 클릭 방지)
+    if (field === 'start' && slide.hasAudio && slide.start === T) return;
+    if (field === 'end' && slide.hasAudio && slide.end === T) return;
+
+    // P 자기 퇴화 체크: 새 start/end가 0-duration 또는 역전이면 거부
+    var newStart = field === 'start' ? T : slide.start;
+    var newEnd = field === 'end' ? T : slide.end;
+    if (newStart !== null && newEnd !== null && newStart >= newEnd) {
+        _scToast('매핑 구간이 0이거나 역전되어 설정할 수 없습니다');
+        return;
+    }
+
+    // 베이스라인 기록 (취소 시 복원용) — 최초 1회만, 모든 guard 통과 후
+    if (!_scMappingBaselines[slide.id]) {
+        _scMappingBaselines[slide.id] = {
+            start: slide.start,
+            end: slide.end,
+            hasAudio: slide.hasAudio,
+        };
+    }
+
+    // 덮어쓰기 규칙: T를 포함하는 다른 페이지 Q의 반대쪽 끝을 T로 자르기
+    // 경계값(q.start === T 또는 q.end === T)은 제외 — 엄격 부등식
+    for (var i = 0; i < SLIDES.length; i++) {
+        if (i === sectionIdx) continue;
+        var q = SLIDES[i];
+        if (!q.hasAudio || q.start === null || q.end === null) continue;
+        if (q.start < T && T < q.end) {
+            // 베이스라인 기록 — Q를 mutation하기 전, 세션 시작(KV 오버레이 머지 후) 상태 캡처
+            if (!_scMappingBaselines[q.id]) {
+                _scMappingBaselines[q.id] = { start: q.start, end: q.end, hasAudio: q.hasAudio };
+            }
+            if (field === 'start') {
+                q.end = T;
+            } else {
+                q.start = T;
+            }
+            // Q가 퇴화되면(start >= end) 교안 전용으로 강등
+            if (q.start >= q.end) {
+                q.hasAudio = false;
+                q.start = null;
+                q.end = null;
+                _scMappingDeletions[q.id] = true;
+                delete _scDirtyMappings[q.id];
+            } else {
+                _scDirtyMappings[q.id] = true;
+                delete _scMappingDeletions[q.id];
+            }
+            break; // 겹침은 항상 0 또는 1개 (불변조건)
+        }
+    }
+
+    // P 자신의 엔드포인트 설정
+    if (field === 'start') {
+        slide.start = T;
+        if (slide.end === null) slide.end = T + 1;  // 임시 placeholder (사용자가 끝도 설정해야 함)
+    } else {
+        slide.end = T;
+        if (slide.start === null) slide.start = Math.max(0, T - 1);
+    }
+    slide.hasAudio = true;
+
+    // 완전 삼킴 검사: P가 다른 Q를 완전히 삼켰다면 Q 강등
+    for (var j = 0; j < SLIDES.length; j++) {
+        if (j === sectionIdx) continue;
+        var qq = SLIDES[j];
+        if (!qq.hasAudio || qq.start === null || qq.end === null) continue;
+        if (slide.start <= qq.start && qq.end <= slide.end) {
+            // 베이스라인 기록 — qq를 nullify하기 전, 세션 시작 상태 캡처
+            if (!_scMappingBaselines[qq.id]) {
+                _scMappingBaselines[qq.id] = { start: qq.start, end: qq.end, hasAudio: qq.hasAudio };
+            }
+            qq.hasAudio = false;
+            qq.start = null;
+            qq.end = null;
+            _scMappingDeletions[qq.id] = true;
+            delete _scDirtyMappings[qq.id];
+            _scToast(qq.id + ' 매핑이 ' + slide.id + ' 범위에 흡수되어 교안 전용으로 전환됨');
+        }
+    }
+
+    _scDirtyMappings[slide.id] = true;
+    delete _scMappingDeletions[slide.id];
+    _scRebuildAudioStructures();
+    _updateEditBadge();
+}
+
+// 단순 토스트 (기존 _scToast 있으면 재활용, 없으면 간단 alert 대체)
+function _scToast(msg) {
+    var t = document.getElementById('sc-toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'sc-toast';
+        t.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(40,40,40,0.92);color:#fff;padding:14px 24px;border-radius:8px;font-size:14px;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;opacity:0;transition:opacity 0.2s;pointer-events:none;';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function() { t.style.opacity = '0'; }, 3000);
+}
+
+window._scApplyMappingEdit = _scApplyMappingEdit;
+// 전역(loadOverlayData, saveEdit, cancelEdit)에서 IIFE 내부 재빌드를 호출하기 위한 브릿지
+window._scRebuildAudioStructures = _scRebuildAudioStructures;
+// 매핑 편집 버튼 핸들러가 audio.currentTime을 읽기 위한 브릿지
+window._scGetAudioTime = function() { return audio.currentTime; };
+window._scGetAudioDuration = function() { return audio.duration; };
+// 매핑 편집 버튼 핸들러가 현재 슬라이드 인덱스를 읽기 위한 브릿지
+window._scCurrentSlideIdx = function() { return currentSlide; };
+window.showSlide = showSlide;
+window.openOverlay = openOverlay;
+window.closeOverlay = closeOverlay;
+window.togglePlay = togglePlay;
+window.changeSpeed = changeSpeed;
+window.skipTime = skipTime;
+Object.defineProperty(window, 'currentSlide', { get: () => currentSlide });
+Object.defineProperty(window, 'isAutoSync', { get: () => isAutoSync, set: v => { isAutoSync = v; } });
+})(); // IIFE 끝
+
+</script>
+</body>
+</html>
