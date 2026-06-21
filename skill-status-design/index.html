@@ -560,6 +560,14 @@ body {
     background: rgba(255, 213, 79, 0.22);
     border-left-color: var(--accent);
 }
+/* 검색어 본문 형광펜 (?q= 진입 시 슬라이드 본문에서 매칭된 키워드) */
+mark.hl {
+    background: linear-gradient(transparent 12%, #FFE08A 12% 88%, transparent 88%);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+    box-shadow: 0 0 0 1px rgba(180, 130, 20, 0.22);
+}
 /* 교안 전용 목차 항목 */
 .index-item:not(.has-audio) .idx-id::after {
     content: '';
@@ -1899,6 +1907,68 @@ function highlightKeywordMatches() {
     });
 }
 
+// ?q= 검색어를 슬라이드 본문에서 찾아 <mark>로 형광펜.
+// 런처 검색/목차 하이라이트와 동일한 정규화(공백 제거 + 소문자)로 매칭하되,
+// 인덱스 매핑으로 화면 본문의 원래 띄어쓰기는 보존한다 (search-index.json은 공백 없는 텍스트).
+var _wsRe = /\s/;
+var _kwHlValue, _kwHlComputed = false;
+function _kwHighlight() {
+    if (_kwHlComputed) return _kwHlValue;
+    _kwHlComputed = true;
+    var q = new URLSearchParams(window.location.search).get('q');
+    var kw = q ? q.trim().replace(/\s/g, '').toLowerCase() : '';
+    _kwHlValue = kw || null;
+    return _kwHlValue;
+}
+// 텍스트 노드 하나에서 공백 무시 매칭 → <mark> 래핑 (원본 공백 보존)
+function _highlightTextNode(node, kw) {
+    var text = node.nodeValue;
+    var compact = '', map = [];  // map[i] = compact i번째 글자의 원본 인덱스
+    for (var i = 0; i < text.length; i++) {
+        var ch = text[i];
+        if (_wsRe.test(ch)) continue;  // 공백은 인덱스에서 제외(런처와 동일)
+        compact += ch.toLowerCase();
+        map.push(i);
+    }
+    if (compact.indexOf(kw) === -1) return;
+    var ranges = [], p = 0, idx;
+    while ((idx = compact.indexOf(kw, p)) !== -1) {
+        // compact 매칭 구간을 원본 인덱스로 환산(끝글자 원본위치 +1)
+        ranges.push([map[idx], map[idx + kw.length - 1] + 1]);
+        p = idx + kw.length;
+    }
+    var frag = document.createDocumentFragment(), last = 0;
+    ranges.forEach(function (r) {
+        if (r[0] > last) frag.appendChild(document.createTextNode(text.slice(last, r[0])));
+        var mk = document.createElement('mark');
+        mk.className = 'hl';
+        mk.textContent = text.slice(r[0], r[1]);  // 원본(공백 포함) 그대로 칠함
+        frag.appendChild(mk);
+        last = r[1];
+    });
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+}
+// 슬라이드 본문(container) 전체에 형광펜 적용.
+// 편집 모드에서는 contentEditable 본문에 <mark>가 섞여 KV에 저장되는 걸 막기 위해 건너뜀.
+function _applySlideHighlight(container) {
+    if (_editMode) return;
+    var kw = _kwHighlight();
+    if (!kw || !container) return;
+    var SKIP = { SCRIPT: 1, STYLE: 1, MARK: 1 };
+    var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (node) {
+            if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+            if (node.parentNode && SKIP[node.parentNode.nodeName]) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+    // 순회 중 DOM을 바꾸면 walker가 꼬이므로 노드를 먼저 모은 뒤 교체
+    var nodes = [], n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    nodes.forEach(function (node) { _highlightTextNode(node, kw); });
+}
+
 function buildAudioMap() {
     const map = document.getElementById('audio-map');
     if (!map) return;
@@ -2014,6 +2084,7 @@ function showSlide(index) {
     contentEl.offsetHeight; // 리플로우 트리거
     contentEl.style.animation = '';
     contentEl.innerHTML = slide.content;
+    _applySlideHighlight(contentEl);  // ?q= 검색어 본문 형광펜 (편집모드 가드 내장)
     const badge = document.getElementById('slide-badge');
     if (slide.hasAudio) {
         badge.textContent = '';
